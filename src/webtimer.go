@@ -37,15 +37,29 @@ func main() {
 	r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", http.FileServer(http.Dir(dir))))
 	r.HandleFunc("/start", StartTimerHandler)
 	r.HandleFunc("/end", EndTimerHandler)
+	r.HandleFunc("/setCookie", SetCookieHandler)
+	const addr string = "127.0.0.1:8000"
+
 	srv := &http.Server{
 		Handler: r,
-		Addr:    "127.0.0.1:8000",
+		Addr:    addr,
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-
+	log.Printf("Now listening on %s", addr)
 	log.Fatal(srv.ListenAndServe())
+}
+
+func SetCookieHandler(w http.ResponseWriter, r *http.Request) {
+	c := http.Cookie{
+		Name:    "userAuthCookie",
+		Value:   "123",//Should be some random authString. Signed? "github.com/go-http-utils/cookie" 
+		Expires: time.Now().Add(15 * time.Second),
+	}
+	http.SetCookie(w, &c)
+	
+	w.WriteHeader(http.StatusOK)
 }
 
 func StartTimerHandler(w http.ResponseWriter, r *http.Request) {
@@ -89,6 +103,4 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(e)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
 }
