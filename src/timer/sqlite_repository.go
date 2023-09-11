@@ -3,6 +3,8 @@ package timer
 import (
 	"database/sql"
 	"errors"
+	"log"
+	
 )
 
 var (
@@ -13,7 +15,7 @@ type TimerDB struct {
 	db *sql.DB
 }
 
-func NewSQLiteRepository(db *sql.DB) *TimerDB {
+func NewDbTimerRepository(db *sql.DB) *TimerDB {
 	return &TimerDB{
 		db: db,
 	}
@@ -22,21 +24,30 @@ func NewSQLiteRepository(db *sql.DB) *TimerDB {
 func (r *TimerDB) Migrate() error {
 	query := `
     CREATE TABLE IF NOT EXISTS users(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
         username TEXT NOT NULL,
         email TEXT NOT NULL
-    );
+		);
+		`
 
-	CREATE TABLE IF NOT EXISTS times(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-		userid INTEGER,
-        starttime INTEGER NOT NULL,
-        endtime INTEGER NOT NULL,
-		FOREIGN KEY(userid) REFERENCES users(id)
-    );
-    `
-
+	log.Print("Creating users table if not exists")
 	_, err := r.db.Exec(query)
+
+	if err != nil {
+		return err
+	}
+
+	log.Print("Creating times table if not exists")
+	query = `
+	CREATE TABLE IF NOT EXISTS times(
+        id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+		userid bigint REFERENCES users (id),
+        starttime bigint NOT NULL,
+        endtime bigint NOT NULL
+    );`
+
+	_, err = r.db.Exec(query)
+
 	return err
 }
 

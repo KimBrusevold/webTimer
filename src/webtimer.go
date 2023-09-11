@@ -1,31 +1,41 @@
 package main
 
 import (
+	"fmt"
+	"kimnb/webtimer/timer"
+
 	"database/sql"
 	"encoding/json"
-	"kimnb/webtimer/timer"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/gorilla/mux"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
-
-const fileName = "sqlite.db"
 
 var timerDb *timer.TimerDB
 
 func main() {
-	os.Remove(fileName)
-	db, err := sql.Open("sqlite3", fileName)
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
+	} else {
+		log.Print("Loaded variables from .env file")
+	}
+	connStr, exists := os.LookupEnv("DB_CONN_STR")
+	if exists == false {
+		log.Fatal("No env variable named 'DB_CONN_STR' in .env file or environment variable. Exiting")
+	}
+
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	log.Print("Migrating sqlLite")
-	timerDb = timer.NewSQLiteRepository(db)
+	timerDb = timer.NewDbTimerRepository(db)
 	if err := timerDb.Migrate(); err != nil {
 		log.Fatal(err)
 	}
@@ -38,7 +48,13 @@ func main() {
 	r.HandleFunc("/start", StartTimerHandler)
 	r.HandleFunc("/end", EndTimerHandler)
 	r.HandleFunc("/setCookie", SetCookieHandler)
-	const addr string = "127.0.0.1:8000"
+
+	port, exists := os.LookupEnv("PORT")
+	if exists == false {
+		log.Fatal("No env variable named 'PORT' in .env file or environment variable. Exiting")
+	}
+
+	addr := fmt.Sprintf("0.0.0.0:%s", port)
 
 	srv := &http.Server{
 		Handler: r,
@@ -53,12 +69,13 @@ func main() {
 
 func SetCookieHandler(w http.ResponseWriter, r *http.Request) {
 	c := http.Cookie{
-		Name:    "userAuthCookie",
-		Value:   "123",//Should be some random authString. Signed? "github.com/go-http-utils/cookie" 
-		Expires: time.Now().Add(15 * time.Second),
+		Name:     "userAuthCookie",
+		Value:    "123", //Should be some random authString. Signed? "github.com/go-http-utils/cookie"
+		Expires:  time.Now().Add(15 * time.Second),
+		HttpOnly: true,
 	}
 	http.SetCookie(w, &c)
-	
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -93,10 +110,19 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	content, err := os.ReadFile("./pages/index.html")
-
 	if err != nil {
-		log.Fatal(err)
+		log.Print("ERROR: Could not read index.html from file")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+	_, cErr := r.Cookie("userAuthCookie")
+	if cErr != nil {
+		w.Header().Add("Location", "/setCookie")
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
+
+	print("Should validate cookie")
 
 	_, e := w.Write(content)
 	if e != nil {
