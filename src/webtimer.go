@@ -1,10 +1,10 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"kimnb/webtimer/timer"
 
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
 )
 
 var timerDb *timer.TimerDB
@@ -29,13 +29,14 @@ func main() {
 		log.Fatal("No env variable named 'DB_CONN_STR' in .env file or environment variable. Exiting")
 	}
 
-	db, err := sql.Open("postgres", connStr)
+	conn, err := sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer conn.Close()
 
 	log.Print("Migrating sqlLite")
-	timerDb = timer.NewDbTimerRepository(db)
+	timerDb = timer.NewDbTimerRepository(conn)
 	if err := timerDb.Migrate(); err != nil {
 		log.Fatal(err)
 	}
@@ -48,6 +49,7 @@ func main() {
 	r.HandleFunc("/start", StartTimerHandler)
 	r.HandleFunc("/end", EndTimerHandler)
 	r.HandleFunc("/setCookie", SetCookieHandler)
+	r.HandleFunc("/registrer-bruker", RegisterHandler)
 
 	port, exists := os.LookupEnv("PORT")
 	if exists == false {
@@ -108,6 +110,36 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%#v", time.Now().UnixMilli())
 }
 
+func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method == "GET" {
+		content, err := os.ReadFile("./pages/register-user.html")
+		if err != nil {
+			log.Print("ERROR: Could not read register-user.html from file")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		_, e := w.Write(content)
+		if e != nil {
+			log.Fatal(e)
+			return
+		}
+	} else if r.Method == "POST" {
+		r.ParseForm()
+
+		username := r.FormValue("username")
+		email := r.FormValue("email")
+		password := r.FormValue("password")
+
+		// timerDb.Create()
+		log.Printf("Username: %s \n", username)
+		log.Printf("Email: %s \n", email)
+		log.Printf("Password: %s \n", password)
+	}
+
+}
+
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	content, err := os.ReadFile("./pages/index.html")
 	if err != nil {
@@ -117,7 +149,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, cErr := r.Cookie("userAuthCookie")
 	if cErr != nil {
-		w.Header().Add("Location", "/setCookie")
+		w.Header().Add("Location", "/registrer-bruker")
 		w.WriteHeader(http.StatusSeeOther)
 		return
 	}

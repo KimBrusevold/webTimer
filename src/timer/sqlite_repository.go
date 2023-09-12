@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"log"
-	
 )
 
 var (
@@ -26,7 +25,8 @@ func (r *TimerDB) Migrate() error {
     CREATE TABLE IF NOT EXISTS users(
 		id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
         username TEXT NOT NULL,
-        email TEXT NOT NULL
+        email TEXT NOT NULL,
+        onetimecode TEXT
 		);
 		`
 
@@ -50,6 +50,10 @@ func (r *TimerDB) Migrate() error {
 
 	return err
 }
+
+// func (r *TimerDB) CreateUser(user User) (* User, error) {
+
+// }
 
 func (r *TimerDB) Create(timer Timer) (*Timer, error) {
 	res, err := r.db.Exec("INSERT INTO times(starttime, endtime) values(?,?)", timer.StartTime, timer.EndTime)

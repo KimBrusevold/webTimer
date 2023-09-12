@@ -8,7 +8,8 @@ type Timer struct {
 }
 
 type User struct {
-	ID       int64
-	Username string
-	Email    string
+	ID          int64
+	Username    string
+	Email       string
+	OneTimeCode string
 }
