@@ -14,4 +14,5 @@ type User struct {
 	Username    string
 	Email       string
 	OneTimeCode sql.NullString
+	authcode    sql.NullString
 }

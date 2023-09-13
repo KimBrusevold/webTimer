@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"kimnb/webtimer/timer"
 
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -17,6 +19,8 @@ import (
 )
 
 var timerDb *timer.TimerDB
+var host string
+var port string
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -53,9 +57,13 @@ func main() {
 	//MIDLERTIDIGE
 	r.HandleFunc("/hent-bruker", GetHandler)
 
-	port, exists := os.LookupEnv("PORT")
+	port, exists = os.LookupEnv("PORT")
 	if exists == false {
 		log.Fatal("No env variable named 'PORT' in .env file or environment variable. Exiting")
+	}
+	host, exists = os.LookupEnv("HOSTURL")
+	if exists == false {
+		log.Fatal("No env variable named 'HOSTURL' in .env file or environment variable. Exiting")
 	}
 
 	addr := fmt.Sprintf("0.0.0.0:%s", port)
@@ -152,7 +160,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(fmt.Sprintf("%d", userid)))
 
-		_ = SendAuthMail(userid)
+		_ = SendAuthMail(userid, email)
 		return
 	}
 
@@ -168,10 +176,9 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte(fmt.Sprintf("%s", res.Username)))
 
-
 }
 
-func SendAuthMail(userId int64) error {
+func SendAuthMail(userId int64, email string) error {
 	res, err := timerDb.GetUser(userId)
 	if err != nil {
 		log.Printf("Could not retrieve")
@@ -179,7 +186,56 @@ func SendAuthMail(userId int64) error {
 		return err
 	}
 
-	log.Print(res.OneTimeCode.String)
+	templateId := "d-67cb50f335c44f85a8960612dc97e7bc"
+	httpposturl := "https://api.sendgrid.com/v3/mail/send"
+
+	redirectUrl := fmt.Sprintf("%s:%s/authenticate/%s", host, port, res.OneTimeCode.String)
+
+	postString := fmt.Sprintf(`{
+		"from":{
+			"email":"kim.brusevold@soprasteria.com"
+		 },
+		 "personalizations":[
+			{
+			   "to":[
+				  {
+					 "email":"%s"
+				  }
+			   ],
+			   "dynamic_template_data":{
+				  "url": "%s"
+				}
+			}
+		 ],
+		 "template_id":"%s"
+	}`, email, redirectUrl, templateId)
+
+	log.Printf(postString)
+
+	postdata := []byte(postString)
+	request, error := http.NewRequest("POST", httpposturl, bytes.NewBuffer(postdata))
+	if error != nil {
+		log.Fatal("Klarte ikke å forberede request for å sende template")
+	}
+	request.Header.Set("Content-Type", "application/json;")
+	sendgridApiKey, exists := os.LookupEnv("SENDGRID_API_KEY")
+	if exists == false {
+		log.Fatal("No env variable named 'SENDGRID_API_KEY' in .env file or environment variable. Exiting")
+	}
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", sendgridApiKey))
+
+	client := &http.Client{}
+	response, error := client.Do(request)
+	if error != nil {
+		log.Panic(error)
+	}
+	defer response.Body.Close()
+
+	fmt.Println("response Status:", response.Status)
+	fmt.Println("response Headers:", response.Header)
+	body, _ := io.ReadAll(response.Body)
+	log.Printf("response Body :%s", string(body))
+
 	return nil
 }
 

@@ -29,6 +29,7 @@ func (r *TimerDB) Migrate() error {
         username TEXT NOT NULL,
         email TEXT NOT NULL,
         onetimecode TEXT
+		authcode TEXT
 		);
 		`
 
