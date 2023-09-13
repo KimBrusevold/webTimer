@@ -50,6 +50,8 @@ func main() {
 	r.HandleFunc("/end", EndTimerHandler)
 	r.HandleFunc("/setCookie", SetCookieHandler)
 	r.HandleFunc("/registrer-bruker", RegisterHandler)
+	//MIDLERTIDIGE
+	r.HandleFunc("/hent-bruker", GetHandler)
 
 	port, exists := os.LookupEnv("PORT")
 	if exists == false {
@@ -130,14 +132,55 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 		username := r.FormValue("username")
 		email := r.FormValue("email")
-		password := r.FormValue("password")
 
 		// timerDb.Create()
 		log.Printf("Username: %s \n", username)
 		log.Printf("Email: %s \n", email)
-		log.Printf("Password: %s \n", password)
+
+		user := timer.User{
+			Username: username,
+			Email:    email,
+		}
+
+		userid, err := timerDb.CreateUser(user)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("Error on create: \n")
+			log.Printf(err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(fmt.Sprintf("%d", userid)))
+
+		_ = SendAuthMail(userid)
+		return
 	}
 
+}
+func GetHandler(w http.ResponseWriter, r *http.Request) {
+	res, err := timerDb.GetUser(1)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Could not retrieve")
+		log.Printf(err.Error())
+		return
+	}
+
+	w.Write([]byte(fmt.Sprintf("%s", res.Username)))
+
+
+}
+
+func SendAuthMail(userId int64) error {
+	res, err := timerDb.GetUser(userId)
+	if err != nil {
+		log.Printf("Could not retrieve")
+		log.Printf(err.Error())
+		return err
+	}
+
+	log.Print(res.OneTimeCode.String)
+	return nil
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {

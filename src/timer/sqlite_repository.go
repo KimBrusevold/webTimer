@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -46,14 +48,61 @@ func (r *TimerDB) Migrate() error {
         endtime bigint NOT NULL
     );`
 
+	log.Print("Adding pgcrypto extention")
+	query = `CREATE EXTENSION IF NOT EXISTS pgcrypto;`
 	_, err = r.db.Exec(query)
+
+	if err != nil {
+		return err
+	}
+
+	log.Print("Add md5 function")
+	query = `
+	CREATE OR REPLACE FUNCTION md5(bytea) 
+	RETURNS text AS $$ 
+	SELECT encode(digest($1, 'md5'), 'hex')
+	$$ LANGUAGE SQL STRICT IMMUTABLE;`
+	_, err = r.db.Exec(query)
+
+	if err != nil {
+		return err
+	}
 
 	return err
 }
 
-// func (r *TimerDB) CreateUser(user User) (* User, error) {
+func (r *TimerDB) CreateUser(user User) (int64, error) {
+	uuid := uuid.New()
 
-// }
+	command := `INSERT INTO users(username, email, onetimecode)
+	 values($1,md5($2), $3)
+	 RETURNING id;`
+
+	row := r.db.QueryRow(command, user.Username, user.Email, uuid.String())
+	var id int64
+
+	err := row.Scan(&id)
+	if err != nil {
+		return -1, err
+	}
+
+	return id, err
+}
+
+func (r *TimerDB) GetUser(userid int64) (*User, error) {
+	command := `SELECT * FROM users WHERE id = $1;`
+
+	row := r.db.QueryRow(command, userid)
+
+	user := User{}
+
+	err := row.Scan(&user.ID, &user.Username, &user.Email, &user.OneTimeCode)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, err
+}
 
 func (r *TimerDB) Create(timer Timer) (*Timer, error) {
 	res, err := r.db.Exec("INSERT INTO times(starttime, endtime) values(?,?)", timer.StartTime, timer.EndTime)

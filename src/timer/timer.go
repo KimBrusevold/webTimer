@@ -1,5 +1,7 @@
 package timer
 
+import "database/sql"
+
 type Timer struct {
 	ID        int64
 	UserID    int64
@@ -11,5 +13,5 @@ type User struct {
 	ID          int64
 	Username    string
 	Email       string
-	OneTimeCode string
+	OneTimeCode sql.NullString
 }
