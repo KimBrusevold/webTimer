@@ -50,6 +50,12 @@ func (r *TimerDB) Migrate() error {
 		computedtime bigint
     );`
 
+	_, err = r.db.Exec(query)
+
+	if err != nil {
+		return err
+	}
+
 	log.Print("Adding pgcrypto extention")
 	query = `CREATE EXTENSION IF NOT EXISTS pgcrypto;`
 	_, err = r.db.Exec(query)
