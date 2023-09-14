@@ -348,7 +348,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	err = timerDb.StartTimer(i)
 	if err != nil {
 		log.Print("Could not start timer")
-		log.Print(cErr.Error())
+		log.Print(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
