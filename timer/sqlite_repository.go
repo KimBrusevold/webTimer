@@ -26,8 +26,8 @@ func (r *TimerDB) Migrate() error {
 	query := `
     CREATE TABLE IF NOT EXISTS users(
 		id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-        username TEXT NOT NULL,
-        email TEXT NOT NULL,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
         onetimecode TEXT,
 		authcode TEXT
 		);
@@ -82,19 +82,30 @@ func (r *TimerDB) Migrate() error {
 func (r *TimerDB) CreateUser(user User) (int64, error) {
 	uuid := uuid.New()
 
-	command := `INSERT INTO users(username, email, onetimecode)
-	 values($1,md5($2), $3)
-	 RETURNING id;`
-
+	command := `SELECT id FROM users WHERE username = $1 AND email = md5($2)`
 	row := r.db.QueryRow(command, user.Username, user.Email, uuid.String())
 	var id int64
 
 	err := row.Scan(&id)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			command = `INSERT INTO users(username, email, onetimecode)
+			values($1,md5($2), $3)
+			RETURNING id;` //#d10ca8d11301c2f4993ac2279ce4b930
+
+			row = r.db.QueryRow(command, user.Username, user.Email, uuid.String())
+
+			err := row.Scan(&id)
+			if err != nil {
+				return -1, err
+			}
+
+			return id, nil
+		}
 		return -1, err
 	}
 
-	return id, err
+	return id, nil
 }
 
 func (r *TimerDB) GetUser(userid int64) (*User, error) {
@@ -138,12 +149,12 @@ func (r *TimerDB) UserAuthProcees(onetimeCode string) (*User, error) {
 	return &user, err
 }
 
-func (r *TimerDB) IsAuthorizedUser(authcode string, id int) bool{
+func (r *TimerDB) IsAuthorizedUser(authcode string, id int) bool {
 	command := `SELECT id WHERE id = $1 AND authcode = $2`
 
 	row := r.db.QueryRow(command, id, authcode)
-
-	err := row.Scan(&id)
+	var resid int64
+	err := row.Scan(&resid)
 
 	return err != nil
 
