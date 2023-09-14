@@ -80,10 +80,10 @@ func (r *TimerDB) Migrate() error {
 }
 
 func (r *TimerDB) CreateUser(user User) (int64, error) {
-	uuid := uuid.New()
+	uid := uuid.New()
 
 	command := `SELECT id FROM users WHERE username = $1 AND email = md5($2)`
-	row := r.db.QueryRow(command, user.Username, user.Email, uuid.String())
+	row := r.db.QueryRow(command, user.Username, user.Email)
 	var id int64
 
 	err := row.Scan(&id)
@@ -93,7 +93,7 @@ func (r *TimerDB) CreateUser(user User) (int64, error) {
 			values($1,md5($2), $3)
 			RETURNING id;` //#d10ca8d11301c2f4993ac2279ce4b930
 
-			row = r.db.QueryRow(command, user.Username, user.Email, uuid.String())
+			row = r.db.QueryRow(command, user.Username, user.Email, uid.String())
 
 			err := row.Scan(&id)
 			if err != nil {
@@ -102,6 +102,17 @@ func (r *TimerDB) CreateUser(user User) (int64, error) {
 
 			return id, nil
 		}
+		return -1, err
+	}
+
+	command = `UPDATE users SET 
+		onetimecode = $1,
+		authcode = NULL
+		WHERE id = $2;`
+
+	_, err = r.db.Exec(command, uid.String(), id)
+	
+	if err != nil {
 		return -1, err
 	}
 
