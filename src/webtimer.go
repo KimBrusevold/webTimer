@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"kimnb/webtimer/timer"
+	"strconv"
 
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -29,7 +29,7 @@ func main() {
 		log.Print("Loaded variables from .env file")
 	}
 	connStr, exists := os.LookupEnv("DB_CONN_STR")
-	if exists == false {
+	if !exists {
 		log.Fatal("No env variable named 'DB_CONN_STR' in .env file or environment variable. Exiting")
 	}
 
@@ -52,17 +52,17 @@ func main() {
 	r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", http.FileServer(http.Dir(dir))))
 	r.HandleFunc("/start", StartTimerHandler)
 	r.HandleFunc("/end", EndTimerHandler)
-	r.HandleFunc("/setCookie", SetCookieHandler)
 	r.HandleFunc("/registrer-bruker", RegisterHandler)
+	r.HandleFunc("/auth/authenticate/{onetimeCode}", AuthenticateHandler)
 	//MIDLERTIDIGE
 	r.HandleFunc("/hent-bruker", GetHandler)
 
 	port, exists = os.LookupEnv("PORT")
-	if exists == false {
+	if !exists {
 		log.Fatal("No env variable named 'PORT' in .env file or environment variable. Exiting")
 	}
 	host, exists = os.LookupEnv("HOSTURL")
-	if exists == false {
+	if !exists {
 		log.Fatal("No env variable named 'HOSTURL' in .env file or environment variable. Exiting")
 	}
 
@@ -79,16 +79,40 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-func SetCookieHandler(w http.ResponseWriter, r *http.Request) {
-	c := http.Cookie{
+func AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	onetimeCode := vars["onetimeCode"]
+
+	if onetimeCode == "" {
+		w.Header().Add("Location", "/registrer-bruker")
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
+
+	user, err := timerDb.UserAuthProcees(onetimeCode)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	userAuthCookie := http.Cookie{
 		Name:     "userAuthCookie",
-		Value:    "123", //Should be some random authString. Signed? "github.com/go-http-utils/cookie"
-		Expires:  time.Now().Add(15 * time.Second),
+		Value:    user.Authcode.String, //Should be some random authString. Signed? "github.com/go-http-utils/cookie"
+		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
 	}
-	http.SetCookie(w, &c)
 
-	w.WriteHeader(http.StatusOK)
+	userIdCookie := http.Cookie{
+		Name:     "userId",
+		Value:    strconv.FormatInt(user.ID, 10), //Should be some random authString. Signed? "github.com/go-http-utils/cookie"
+		Expires:  time.Now().Add(24 * time.Hour),
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, &userAuthCookie)
+	http.SetCookie(w, &userIdCookie)
+
+	w.Header().Add("Location", "/")
+	w.WriteHeader(http.StatusSeeOther)
 }
 
 func StartTimerHandler(w http.ResponseWriter, r *http.Request) {
@@ -153,14 +177,30 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		userid, err := timerDb.CreateUser(user)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			log.Printf("Error on create: \n")
-			log.Printf(err.Error())
+			log.Print("Error on create: \n")
+			log.Print(err.Error())
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(fmt.Sprintf("%d", userid)))
 
-		_ = SendAuthMail(userid, email)
+		err = SendAuthMail(userid, email)
+		if err != nil {
+			w.Write([]byte("Something went wrong"))
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+
+		content, err := os.ReadFile("./pages/email-sent.html")
+		if err != nil {
+			log.Print("ERROR: Could not read email-sent.html from file")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		_, err = w.Write(content)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
 		return
 	}
 
@@ -170,19 +210,19 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Could not retrieve")
-		log.Printf(err.Error())
+		log.Print(err.Error())
 		return
 	}
 
-	w.Write([]byte(fmt.Sprintf("%s", res.Username)))
+	w.Write([]byte(res.Username))
 
 }
 
 func SendAuthMail(userId int64, email string) error {
 	res, err := timerDb.GetUser(userId)
 	if err != nil {
-		log.Printf("Could not retrieve")
-		log.Printf(err.Error())
+		log.Print("Could not retrieve")
+		log.Print(err.Error())
 		return err
 	}
 
@@ -210,7 +250,7 @@ func SendAuthMail(userId int64, email string) error {
 		 "template_id":"%s"
 	}`, email, redirectUrl, templateId)
 
-	log.Printf(postString)
+	log.Print(postString)
 
 	postdata := []byte(postString)
 	request, error := http.NewRequest("POST", httpposturl, bytes.NewBuffer(postdata))
@@ -219,7 +259,7 @@ func SendAuthMail(userId int64, email string) error {
 	}
 	request.Header.Set("Content-Type", "application/json;")
 	sendgridApiKey, exists := os.LookupEnv("SENDGRID_API_KEY")
-	if exists == false {
+	if !exists {
 		log.Fatal("No env variable named 'SENDGRID_API_KEY' in .env file or environment variable. Exiting")
 	}
 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", sendgridApiKey))
@@ -231,10 +271,7 @@ func SendAuthMail(userId int64, email string) error {
 	}
 	defer response.Body.Close()
 
-	fmt.Println("response Status:", response.Status)
-	fmt.Println("response Headers:", response.Header)
-	body, _ := io.ReadAll(response.Body)
-	log.Printf("response Body :%s", string(body))
+	log.Printf("Sendgripd response Status: %s", response.Status)
 
 	return nil
 }

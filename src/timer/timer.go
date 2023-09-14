@@ -3,10 +3,11 @@ package timer
 import "database/sql"
 
 type Timer struct {
-	ID        int64
-	UserID    int64
-	StartTime int64
-	EndTime   int64
+	ID           int64
+	UserID       int64
+	StartTime    int64
+	EndTime      int64
+	ComputedTime sql.NullInt64
 }
 
 type User struct {
@@ -14,5 +15,5 @@ type User struct {
 	Username    string
 	Email       string
 	OneTimeCode sql.NullString
-	authcode    sql.NullString
+	Authcode    sql.NullString
 }
