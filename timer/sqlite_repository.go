@@ -28,7 +28,7 @@ func (r *TimerDB) Migrate() error {
 		id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
         username TEXT NOT NULL,
         email TEXT NOT NULL,
-        onetimecode TEXT
+        onetimecode TEXT,
 		authcode TEXT
 		);
 		`
