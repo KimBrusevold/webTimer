@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -183,6 +184,33 @@ func (r *TimerDB) Create(timer Timer) (*Timer, error) {
 	timer.ID = id
 
 	return &timer, nil
+}
+
+func (r *TimerDB) StartTimer(userId int) error {
+	startTime := time.Now().UnixMilli()
+	_, err := r.db.Exec("INSERT INTO times(starttime, userid) values($1,$3)", startTime, userId)
+
+	return err
+}
+func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
+	query := `SELECT id, starttime FROM times WHERE userid = $1 AND endtime IS NULL`
+	res, err := r.db.Query(query, userId)
+	if err != nil {
+		return -1, err
+	}
+
+	var id int64
+	var startTime int64
+	err = res.Scan(&id, &startTime)
+	if err != nil {
+		return -1, err
+	}
+
+	endtime := time.Now().UnixMilli()
+	computed := endtime - startTime
+	_, err = r.db.Exec("UPDATE times SET endtime = $1, computedtime = $2 WHERE id ? $3", endtime, computed, id)
+
+	return computed, err
 }
 
 func (r *TimerDB) Update(id int64, updated Timer) (*Timer, error) {

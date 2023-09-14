@@ -8,7 +8,6 @@ import (
 
 	"github.com/KimBrusevold/webTimer/timer"
 
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -51,7 +50,6 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", HomeHandler)
 	r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", http.FileServer(http.Dir(dir))))
-	r.HandleFunc("/start", StartTimerHandler)
 	r.HandleFunc("/end", EndTimerHandler)
 	r.HandleFunc("/registrer-bruker", RegisterHandler)
 	r.HandleFunc("/auth/authenticate/{onetimeCode}", AuthenticateHandler)
@@ -120,33 +118,58 @@ func AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("You are ready to time go to /"))
 }
 
-func StartTimerHandler(w http.ResponseWriter, r *http.Request) {
-	startTime := time.Now().UnixMilli()
-	t := timer.Timer{
-		StartTime: startTime,
-		EndTime:   0,
-	}
-	log.Print("Creating TIme")
-	createTime, err := timerDb.Create(t)
-
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-	log.Print("Creating JSON")
-	jTime, err := json.Marshal(createTime)
-
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-	log.Print("WRITING JSON")
-
-	w.Write(jTime)
-}
-
 func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%#v", time.Now().UnixMilli())
+	userCookie, cErr := r.Cookie("userAuthCookie")
+	if cErr != nil {
+		log.Print("User not authenticated. Does not have userAuthCookie")
+		log.Print(cErr.Error())
+		w.Header().Add("Location", "/registrer-bruker")
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
+	idCookie, cErr := r.Cookie("userId")
+
+	if cErr != nil {
+		log.Print("User not authenticated. Does not have userId cookie")
+		log.Print(cErr.Error())
+		w.Header().Add("Location", "/registrer-bruker")
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
+
+	i, err := strconv.Atoi(idCookie.Value)
+	if err != nil {
+		log.Print("Could not get id from cookie")
+		log.Print(cErr.Error())
+		w.Header().Add("Location", "/registrer-bruker")
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
+	isAuthenticated := timerDb.IsAuthorizedUser(userCookie.Value, i)
+	if !isAuthenticated {
+		log.Print("Could not find user with id and auth code")
+		log.Print(cErr.Error())
+		w.Header().Add("Location", "/registrer-bruker")
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
+
+	timeUsed, err := timerDb.EndTimeTimer(i)
+	if err != nil {
+		log.Print("Could not start timer")
+		log.Print(cErr.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	minutes := timeUsed % (60 * 1000)
+	seconds := timeUsed % (1000)
+	tenths := timeUsed % (100)
+	_, e := w.Write([]byte(fmt.Sprintf("Du brukte %dm %d.%d", minutes, seconds, tenths)))
+	if e != nil {
+		log.Fatal(e)
+		return
+	}
 }
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -322,11 +345,19 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = timerDb.StartTimer(i)
+	if err != nil {
+		log.Print("Could not start timer")
+		log.Print(cErr.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	_, e := w.Write(content)
 	if e != nil {
 		log.Fatal(e)
 		return
 	}
+
 }
 
 func IsAuthorizedUser(s string, i int) {
