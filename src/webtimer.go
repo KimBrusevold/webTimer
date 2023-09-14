@@ -110,7 +110,7 @@ func AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, &userAuthCookie)
 	http.SetCookie(w, &userIdCookie)
-
+	log.Print("Setting Cookie")
 	w.Header().Add("Location", "/")
 	w.WriteHeader(http.StatusSeeOther)
 }
