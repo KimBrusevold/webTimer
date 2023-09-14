@@ -285,6 +285,8 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, cErr := r.Cookie("userAuthCookie")
 	if cErr != nil {
+		log.Print("User not authenticated")
+		log.Print(cErr.Error())
 		w.Header().Add("Location", "/registrer-bruker")
 		w.WriteHeader(http.StatusSeeOther)
 		return
