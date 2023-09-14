@@ -188,9 +188,11 @@ func (r *TimerDB) Create(timer Timer) (*Timer, error) {
 
 func (r *TimerDB) StartTimer(userId int) error {
 	startTime := time.Now().UnixMilli()
-	_, err := r.db.Exec("INSERT INTO times(starttime, userid) values($1,$2)", startTime, userId)
-
-	return err
+	_, err := r.db.Exec(`INSERT INTO times(starttime, userid) values($1,$2)`, startTime, userId)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 	query := `SELECT id, starttime FROM times WHERE userid = $1 AND endtime IS NULL`
