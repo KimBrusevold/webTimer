@@ -162,9 +162,9 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	minutes := timeUsed % (60 * 1000)
-	seconds := timeUsed % (1000)
-	tenths := timeUsed % (100)
+	minutes := timeUsed / (60 * 1000) % 60
+	seconds := timeUsed / (1000) % 60
+	tenths := timeUsed / (100) % 1000
 	_, e := w.Write([]byte(fmt.Sprintf("Du brukte %dm %d.%d", minutes, seconds, tenths)))
 	if e != nil {
 		log.Fatal(e)
