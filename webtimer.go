@@ -189,6 +189,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.Write([]byte("Something went wrong"))
 			w.WriteHeader(http.StatusInternalServerError)
+			return 
 		}
 
 		content, err := os.ReadFile("./pages/email-sent.html")

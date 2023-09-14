@@ -92,7 +92,7 @@ func (r *TimerDB) CreateUser(user User) (int64, error) {
 }
 
 func (r *TimerDB) GetUser(userid int64) (*User, error) {
-	command := `SELECT * FROM users WHERE id = $1;`
+	command := `SELECT id, username, email, onetimecode FROM users WHERE id = $1;`
 
 	row := r.db.QueryRow(command, userid)
 
