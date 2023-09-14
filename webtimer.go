@@ -29,7 +29,7 @@ func main() {
 	} else {
 		log.Print("Loaded variables from .env file")
 	}
-	connStr, exists := os.LookupEnv("DB_CONN_STR")
+	connStr, exists := os.LookupEnv("DATABASE_URL")
 	if !exists {
 		log.Fatal("No env variable named 'DB_CONN_STR' in .env file or environment variable. Exiting")
 	}
