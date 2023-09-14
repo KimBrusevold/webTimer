@@ -288,22 +288,23 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userCookie, cErr := r.Cookie("userAuthCookie")
+	if cErr != nil {
+		log.Print("User not authenticated. Does not have userAuthCookie")
+		log.Print(cErr.Error())
+		w.Header().Add("Location", "/registrer-bruker")
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
 	idCookie, cErr := r.Cookie("userId")
 
 	if cErr != nil {
-		log.Print("User not authenticated")
+		log.Print("User not authenticated. Does not have userId cookie")
 		log.Print(cErr.Error())
 		w.Header().Add("Location", "/registrer-bruker")
 		w.WriteHeader(http.StatusSeeOther)
 		return
 	}
-	if cErr != nil {
-		log.Print("User not authenticated")
-		log.Print(cErr.Error())
-		w.Header().Add("Location", "/registrer-bruker")
-		w.WriteHeader(http.StatusSeeOther)
-		return
-	}
+
 	i, err := strconv.Atoi(idCookie.Value)
 	if err != nil || timerDb.IsAuthorizedUser(userCookie.Value, i) {
 		log.Print("User not authenticated")
