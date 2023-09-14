@@ -208,7 +208,7 @@ func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 
 	endtime := time.Now().UnixMilli()
 	computed := endtime - startTime
-	_, err = r.db.Exec("UPDATE times SET endtime = $1, computedtime = $2 WHERE id ? $3", endtime, computed, id)
+	_, err = r.db.Exec("UPDATE times SET endtime = $1, computedtime = $2 WHERE id = $3", endtime, computed, id)
 
 	return computed, err
 }
