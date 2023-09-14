@@ -113,7 +113,7 @@ func (r *TimerDB) GetUser(userid int64) (*User, error) {
 }
 
 func (r *TimerDB) UserAuthProcees(onetimeCode string) (*User, error) {
-	command := `SELECT * FROM users WHERE onetimecode = $1;`
+	command := `SELECT id, username, email, onetimecode FROM users WHERE onetimecode = $1;`
 
 	row := r.db.QueryRow(command, onetimeCode)
 

@@ -229,7 +229,7 @@ func SendAuthMail(userId int64, email string) error {
 	templateId := "d-67cb50f335c44f85a8960612dc97e7bc"
 	httpposturl := "https://api.sendgrid.com/v3/mail/send"
 
-	redirectUrl := fmt.Sprintf("%s/authenticate/%s", host, res.OneTimeCode.String)
+	redirectUrl := fmt.Sprintf("%s/auth/authenticate/authenticate/%s", host, res.OneTimeCode.String)
 
 	postString := fmt.Sprintf(`{
 		"from":{
