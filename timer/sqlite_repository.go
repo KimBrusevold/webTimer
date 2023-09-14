@@ -188,7 +188,7 @@ func (r *TimerDB) Create(timer Timer) (*Timer, error) {
 
 func (r *TimerDB) StartTimer(userId int) error {
 	startTime := time.Now().UnixMilli()
-	_, err := r.db.Exec("INSERT INTO times(starttime, userid) values($1,$3)", startTime, userId)
+	_, err := r.db.Exec("INSERT INTO times(starttime, userid) values($1,$2)", startTime, userId)
 
 	return err
 }
