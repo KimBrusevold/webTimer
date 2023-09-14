@@ -138,6 +138,17 @@ func (r *TimerDB) UserAuthProcees(onetimeCode string) (*User, error) {
 	return &user, err
 }
 
+func (r *TimerDB) IsAuthorizedUser(authcode string, id int) bool{
+	command := `SELECT id WHERE id = $1 AND authcode = $2`
+
+	row := r.db.QueryRow(command, id, authcode)
+
+	err := row.Scan(&id)
+
+	return err != nil
+
+}
+
 func (r *TimerDB) Create(timer Timer) (*Timer, error) {
 	res, err := r.db.Exec("INSERT INTO times(starttime, endtime) values(?,?)", timer.StartTime, timer.EndTime)
 	if err != nil {

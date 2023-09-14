@@ -101,6 +101,7 @@ func AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
 		Secure:   true,
+		Path:     "/",
 	}
 
 	userIdCookie := http.Cookie{
@@ -109,6 +110,7 @@ func AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
 		Secure:   true,
+		Path:     "/",
 	}
 
 	http.SetCookie(w, &userAuthCookie)
@@ -285,7 +287,9 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	_, cErr := r.Cookie("userAuthCookie")
+	userCookie, cErr := r.Cookie("userAuthCookie")
+	idCookie, cErr := r.Cookie("userId")
+
 	if cErr != nil {
 		log.Print("User not authenticated")
 		log.Print(cErr.Error())
@@ -293,12 +297,29 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusSeeOther)
 		return
 	}
-
-	print("Should validate cookie")
+	if cErr != nil {
+		log.Print("User not authenticated")
+		log.Print(cErr.Error())
+		w.Header().Add("Location", "/registrer-bruker")
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
+	i, err := strconv.Atoi(idCookie.Value)
+	if err != nil || timerDb.IsAuthorizedUser(userCookie.Value, i) {
+		log.Print("User not authenticated")
+		log.Print(cErr.Error())
+		w.Header().Add("Location", "/registrer-bruker")
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
 
 	_, e := w.Write(content)
 	if e != nil {
 		log.Fatal(e)
 		return
 	}
+}
+
+func IsAuthorizedUser(s string, i int) {
+	panic("unimplemented")
 }
