@@ -1,4 +1,4 @@
-module kimnb/webtimer
+module github.com/KimBrusevold/webTimer
 
 go 1.21
 

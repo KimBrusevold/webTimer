@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"kimnb/webtimer/timer"
 	"strconv"
+
+	"github.com/KimBrusevold/webTimer/timer"
 
 	"encoding/json"
 	"log"
