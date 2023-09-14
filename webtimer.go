@@ -182,14 +182,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			log.Print(err.Error())
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(fmt.Sprintf("%d", userid)))
 
 		err = SendAuthMail(userid, email)
 		if err != nil {
 			w.Write([]byte("Something went wrong"))
 			w.WriteHeader(http.StatusInternalServerError)
-			return 
+			return
 		}
 
 		content, err := os.ReadFile("./pages/email-sent.html")
@@ -231,7 +229,7 @@ func SendAuthMail(userId int64, email string) error {
 	templateId := "d-67cb50f335c44f85a8960612dc97e7bc"
 	httpposturl := "https://api.sendgrid.com/v3/mail/send"
 
-	redirectUrl := fmt.Sprintf("%s:%s/authenticate/%s", host, port, res.OneTimeCode.String)
+	redirectUrl := fmt.Sprintf("%s/authenticate/%s", host, res.OneTimeCode.String)
 
 	postString := fmt.Sprintf(`{
 		"from":{
@@ -255,8 +253,8 @@ func SendAuthMail(userId int64, email string) error {
 	log.Print(postString)
 
 	postdata := []byte(postString)
-	request, error := http.NewRequest("POST", httpposturl, bytes.NewBuffer(postdata))
-	if error != nil {
+	request, err := http.NewRequest("POST", httpposturl, bytes.NewBuffer(postdata))
+	if err != nil {
 		log.Fatal("Klarte ikke å forberede request for å sende template")
 	}
 	request.Header.Set("Content-Type", "application/json;")
@@ -267,9 +265,9 @@ func SendAuthMail(userId int64, email string) error {
 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", sendgridApiKey))
 
 	client := &http.Client{}
-	response, error := client.Do(request)
-	if error != nil {
-		log.Panic(error)
+	response, err := client.Do(request)
+	if err != nil {
+		log.Panic(err)
 	}
 	defer response.Body.Close()
 
