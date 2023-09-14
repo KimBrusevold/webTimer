@@ -1,1 +1,1 @@
-web: src\webtimer.exe
+web: webtimer
