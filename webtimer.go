@@ -306,8 +306,16 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	i, err := strconv.Atoi(idCookie.Value)
-	if err != nil || timerDb.IsAuthorizedUser(userCookie.Value, i) {
-		log.Print("User not authenticated")
+	if err != nil {
+		log.Print("Could not get id from cookie")
+		log.Print(cErr.Error())
+		w.Header().Add("Location", "/registrer-bruker")
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
+	isAuthenticated := timerDb.IsAuthorizedUser(userCookie.Value, i)
+	if !isAuthenticated {
+		log.Print("Could not find user with id and auth code")
 		log.Print(cErr.Error())
 		w.Header().Add("Location", "/registrer-bruker")
 		w.WriteHeader(http.StatusSeeOther)

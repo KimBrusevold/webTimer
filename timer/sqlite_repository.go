@@ -111,7 +111,7 @@ func (r *TimerDB) CreateUser(user User) (int64, error) {
 		WHERE id = $2;`
 
 	_, err = r.db.Exec(command, uid.String(), id)
-	
+
 	if err != nil {
 		return -1, err
 	}
@@ -168,7 +168,6 @@ func (r *TimerDB) IsAuthorizedUser(authcode string, id int) bool {
 	err := row.Scan(&resid)
 
 	return err != nil
-
 }
 
 func (r *TimerDB) Create(timer Timer) (*Timer, error) {
