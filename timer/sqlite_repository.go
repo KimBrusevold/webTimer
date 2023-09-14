@@ -47,7 +47,7 @@ func (r *TimerDB) Migrate() error {
         id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 		userid bigint REFERENCES users (id),
         starttime bigint NOT NULL,
-        endtime bigint NOT NULL,
+        endtime bigint NULL,
 		computedtime bigint
     );`
 
