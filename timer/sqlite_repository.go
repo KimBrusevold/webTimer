@@ -197,14 +197,11 @@ func (r *TimerDB) StartTimer(userId int) error {
 }
 func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 	query := `SELECT id, starttime FROM times WHERE userid = $1 AND endtime IS NULL`
-	res, err := r.db.Query(query, userId)
-	if err != nil {
-		return -1, err
-	}
-
+	row := r.db.QueryRow(query, userId)
+	
 	var id int64
 	var startTime int64
-	err = res.Scan(&id, &startTime)
+	err := row.Scan(&id, &startTime)
 	if err != nil {
 		return -1, err
 	}
