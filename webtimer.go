@@ -100,6 +100,7 @@ func AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 		Value:    user.Authcode.String, //Should be some random authString. Signed? "github.com/go-http-utils/cookie"
 		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
+		Secure:   true,
 	}
 
 	userIdCookie := http.Cookie{
@@ -107,13 +108,14 @@ func AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 		Value:    strconv.FormatInt(user.ID, 10), //Should be some random authString. Signed? "github.com/go-http-utils/cookie"
 		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
+		Secure:   true,
 	}
 
 	http.SetCookie(w, &userAuthCookie)
 	http.SetCookie(w, &userIdCookie)
-	log.Print("Setting Cookie")
-	w.Header().Add("Location", "/")
-	w.WriteHeader(http.StatusSeeOther)
+
+	w.Header().Add("Content-Type", "text/html")
+	w.Write([]byte("You are ready to time go to /"))
 }
 
 func StartTimerHandler(w http.ResponseWriter, r *http.Request) {
