@@ -183,7 +183,7 @@ func ValidateEmail(w http.ResponseWriter, r *http.Request) {
 		returnForm := fmt.Sprintf(`
 		<div hx-target="this" hx-swap="outerHTML">
         	<label for="email">Din epost: </label>
-        	<input hx-post="/contact/username" type="email" name="email" id="email" value="%s" required />
+        	<input hx-post="/registrer-bruker/email" type="email" name="email" id="email" value="%s" required />
 			<div class='error-message'>Ugyldig epost. Kun Soprasteria kan registrere seg på dette tidspunktet</div>
       	</div>
 		`, email)
