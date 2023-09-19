@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/KimBrusevold/webTimer/timer"
 
@@ -51,10 +52,11 @@ func main() {
 	r.HandleFunc("/", HomeHandler)
 	r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", http.FileServer(http.Dir(dir))))
 	r.HandleFunc("/end", EndTimerHandler)
-	r.HandleFunc("/registrer-bruker", RegisterHandler)
 	r.HandleFunc("/auth/authenticate/{onetimeCode}", AuthenticateHandler)
-	//MIDLERTIDIGE
-	r.HandleFunc("/hent-bruker", GetHandler)
+
+	registerUserRouter := r.PathPrefix("/registrer-bruker").Subrouter()
+	registerUserRouter.HandleFunc("/", RegisterHandler)
+	registerUserRouter.HandleFunc("/email", ValidateEmail).Methods("POST")
 
 	port, exists = os.LookupEnv("PORT")
 	if !exists {
@@ -137,7 +139,7 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	i, err := strconv.Atoi(idCookie.Value)
+	userId, err := strconv.Atoi(idCookie.Value)
 	if err != nil {
 		log.Print("Could not get id from cookie")
 		log.Print(cErr.Error())
@@ -145,7 +147,7 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusSeeOther)
 		return
 	}
-	isAuthenticated := timerDb.IsAuthorizedUser(userCookie.Value, i)
+	isAuthenticated := timerDb.IsAuthorizedUser(userCookie.Value, userId)
 	if !isAuthenticated {
 		log.Print("Could not find user with id and auth code")
 		log.Print(cErr.Error())
@@ -154,7 +156,7 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	timeUsed, err := timerDb.EndTimeTimer(i)
+	timeUsed, err := timerDb.EndTimeTimer(userId)
 	if err != nil {
 		log.Print("Could not stop timer")
 		log.Print(err.Error())
@@ -168,6 +170,26 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 	_, e := w.Write([]byte(fmt.Sprintf("<h1>Du brukte %d min %d.%d sekunder<h2>", minutes, seconds, tenths)))
 	if e != nil {
 		log.Fatal(e)
+		return
+	}
+}
+
+func ValidateEmail(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Validating email")
+	email := r.FormValue("email")
+	emailParts := strings.Split(email, "@")
+
+	if len(emailParts) != 2 || emailParts[1] != "sporasteria.com" {
+		returnForm := fmt.Sprintf(`
+		<div hx-target="this" hx-swap="outerHTML">
+        	<label for="email">Din epost: </label>
+        	<input hx-post="/contact/username" type="email" name="email" id="email" value="%s" required />
+			<div class='error-message'>Ugyldig epost. Kun Soprasteria kan registrere seg på dette tidspunktet</div>
+      	</div>
+		`, email)
+		w.Write([]byte(returnForm))
+		w.WriteHeader(http.StatusOK)
+		log.Printf("Invalid email %s", email)
 		return
 	}
 }
@@ -194,8 +216,14 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 		username := r.FormValue("username")
 		email := r.FormValue("email")
+		emailParts := strings.Split(email, "@")
+		if len(emailParts) != 2 || emailParts[1] != "sporasteria.com" {
+			w.Write([]byte("Kun eposter @soprasteria.com er tillat. Kanskje en annen gang"))
+			w.WriteHeader(http.StatusBadRequest)
+			log.Printf("Invalid email %s", email)
+			return
+		}
 
-		// timerDb.Create()
 		log.Printf("Username: %s \n", username)
 		log.Printf("Email: %s \n", email)
 
@@ -232,18 +260,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-}
-func GetHandler(w http.ResponseWriter, r *http.Request) {
-	res, err := timerDb.GetUser(1)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("Could not retrieve")
-		log.Print(err.Error())
-		return
-	}
-
-	w.Write([]byte(res.Username))
 
 }
 
@@ -287,7 +303,7 @@ func SendAuthMail(userId int64, email string) error {
 		log.Fatal("Klarte ikke å forberede request for å sende template")
 	}
 	request.Header.Set("Content-Type", "application/json;")
-	sendgridApiKey, exists := os.LookupEnv("SENDGRID_API_KEY")
+	sendgridApiKey, exists := os.LookupEnv("SENDGRID_API_KEY") //Can be read one time
 	if !exists {
 		log.Fatal("No env variable named 'SENDGRID_API_KEY' in .env file or environment variable. Exiting")
 	}
