@@ -184,7 +184,9 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 		_, e := w.Write(content)
 		if e != nil {
-			log.Fatal(e)
+			log.Print("Could not write content to responseWriter")
+			log.Print(e.Error())
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	} else if r.Method == "POST" {
