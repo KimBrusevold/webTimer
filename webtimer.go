@@ -7,13 +7,14 @@ import (
 	"strconv"
 
 	"github.com/KimBrusevold/webTimer/timer"
+	"github.com/gorilla/mux"
 
 	"log"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 )
@@ -45,16 +46,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	dir := "./static/images"
+	// dir := "./static/images"
 
-	r := mux.NewRouter()
-	r.HandleFunc("/", HomeHandler)
-	r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", http.FileServer(http.Dir(dir))))
-	r.HandleFunc("/end", EndTimerHandler)
-	r.HandleFunc("/registrer-bruker", RegisterHandler)
-	r.HandleFunc("/auth/authenticate/{onetimeCode}", AuthenticateHandler)
-	//MIDLERTIDIGE
-	r.HandleFunc("/hent-bruker", GetHandler)
+	r := gin.Default()
+	r.LoadHTMLGlob("/pages")
+
+
+	r.GET("/", HomeHandler)
+
+	// r.HandleFunc("/")
+	// r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", http.FileServer(http.Dir(dir))))
+	// r.HandleFunc("/end", EndTimerHandler)
+	// r.HandleFunc("/registrer-bruker", RegisterHandler)
+
+	// r.HandleFunc("/auth/authenticate/{onetimeCode}", AuthenticateHandler)
+	// //MIDLERTIDIGE
+	// r.HandleFunc("/hent-bruker", GetHandler)
 
 	port, exists = os.LookupEnv("PORT")
 	if !exists {
@@ -172,68 +179,6 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method == "GET" {
-		content, err := os.ReadFile("./pages/register-user.html")
-		if err != nil {
-			log.Print("ERROR: Could not read register-user.html from file")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		_, e := w.Write(content)
-		if e != nil {
-			log.Print("Could not write content to responseWriter")
-			log.Print(e.Error())
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	} else if r.Method == "POST" {
-		r.ParseForm()
-
-		username := r.FormValue("username")
-		email := r.FormValue("email")
-
-		// timerDb.Create()
-		log.Printf("Username: %s \n", username)
-		log.Printf("Email: %s \n", email)
-
-		user := timer.User{
-			Username: username,
-			Email:    email,
-		}
-
-		userid, err := timerDb.CreateUser(user)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			log.Print("Error on create: \n")
-			log.Print(err.Error())
-			return
-		}
-
-		err = SendAuthMail(userid, email)
-		if err != nil {
-			w.Write([]byte("Something went wrong"))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		content, err := os.ReadFile("./pages/email-sent.html")
-		if err != nil {
-			log.Print("ERROR: Could not read email-sent.html from file")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		_, err = w.Write(content)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-		return
-	}
-
-}
 func GetHandler(w http.ResponseWriter, r *http.Request) {
 	res, err := timerDb.GetUser(1)
 	if err != nil {
@@ -305,45 +250,39 @@ func SendAuthMail(userId int64, email string) error {
 	return nil
 }
 
-func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	content, err := os.ReadFile("./pages/index.html")
-	if err != nil {
-		log.Print("ERROR: Could not read index.html from file")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	userCookie, cErr := r.Cookie("userAuthCookie")
+func HomeHandler(c *gin.Context) {
+	userCookie, cErr := c.Cookie("userAuthCookie")
 	if cErr != nil {
 		log.Print("User not authenticated. Does not have userAuthCookie")
 		log.Print(cErr.Error())
-		w.Header().Add("Location", "/registrer-bruker")
-		w.WriteHeader(http.StatusSeeOther)
+		c.Header("Location", "/registrer-bruker")
+		c.Status(http.StatusSeeOther)
 		return
 	}
-	idCookie, cErr := r.Cookie("userId")
+	idCookie, cErr := c.Cookie("userId")
 
 	if cErr != nil {
 		log.Print("User not authenticated. Does not have userId cookie")
 		log.Print(cErr.Error())
-		w.Header().Add("Location", "/registrer-bruker")
-		w.WriteHeader(http.StatusSeeOther)
+		c.Header("Location", "/registrer-bruker")
+		c.Status(http.StatusSeeOther)
 		return
 	}
 
-	i, err := strconv.Atoi(idCookie.Value)
+	i, err := strconv.Atoi(idCookie)
 	if err != nil {
 		log.Print("Could not get id from cookie")
 		log.Print(cErr.Error())
-		w.Header().Add("Location", "/registrer-bruker")
-		w.WriteHeader(http.StatusSeeOther)
+		c.Header("Location", "/registrer-bruker")
+		c.Status(http.StatusSeeOther)
 		return
 	}
-	isAuthenticated := timerDb.IsAuthorizedUser(userCookie.Value, i)
+	isAuthenticated := timerDb.IsAuthorizedUser(userCookie, i)
 	if !isAuthenticated {
 		log.Print("Could not find user with id and auth code")
 		log.Print(cErr.Error())
-		w.Header().Add("Location", "/registrer-bruker")
-		w.WriteHeader(http.StatusSeeOther)
+		c.Header("Location", "/registrer-bruker")
+		c.Status(http.StatusSeeOther)
 		return
 	}
 
@@ -351,15 +290,18 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print("Could not start timer")
 		log.Print(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	_, e := w.Write(content)
-	if e != nil {
-		log.Fatal(e)
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
+	if err != nil {
+		log.Print("ERROR: Could not read index.html from file")
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	
+	c.HTML(http.StatusOK, "index.html", nil)
+	
 }
 
 func IsAuthorizedUser(s string, i int) {
