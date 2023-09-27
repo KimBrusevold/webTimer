@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/KimBrusevold/webTimer/timer"
 	"github.com/gin-gonic/gin"
@@ -26,10 +27,21 @@ func createUser(c *gin.Context) {
 	//TODO: Denne bør sette error i form = Epost og brukernavn er påkrevde felter.
 	if user.Email == "" || user.Username == "" {
 		log.Print("Could not bind form data to user")
-		c.String(http.StatusBadRequest, "<p>Ugyldig epost eller navn</p>")
+		c.String(http.StatusBadRequest, "Ugyldig epost eller navn")
 		return
 	}
-	
+	v := strings.Split(user.Email, "@")
+
+	if len(v) != 2 {
+		log.Printf("Invalid email: %s", user.Email)
+		c.String(http.StatusBadRequest, "Ugyldig epost")
+		return
+	}
+	if v[1] != "soprasteria.com" {
+		log.Printf("User with email-domain: %s tried to sign up.", v[1])
+		c.String(http.StatusBadRequest, "Beklager, du kan ikke registrere deg (enda)")
+		return
+	}
 
 	log.Printf("Username: %s \n", user.Username)
 	log.Printf("Email: %s \n", user.Email)
