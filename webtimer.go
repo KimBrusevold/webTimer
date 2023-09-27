@@ -2,12 +2,13 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"strconv"
 
+	"github.com/KimBrusevold/webTimer/handlers"
 	"github.com/KimBrusevold/webTimer/timer"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 
 	"log"
 	"net/http"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/joho/godotenv"
 )
 
 var timerDb *timer.TimerDB
@@ -29,48 +29,47 @@ func main() {
 	} else {
 		log.Print("Loaded variables from .env file")
 	}
-	connStr, exists := os.LookupEnv("DATABASE_URL")
-	if !exists {
-		log.Fatal("No env variable named 'DB_CONN_STR' in .env file or environment variable. Exiting")
-	}
+	// _, exists := os.LookupEnv("DATABASE_URL")
+	// if !exists {
+	// 	log.Fatal("No env variable named 'DB_CONN_STR' in .env file or environment variable. Exiting")
+	// }
 
-	conn, err := sql.Open("pgx", connStr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
+	// conn, err := sql.Open("pgx", connStr)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer conn.Close()
 
-	log.Print("Migrating sqlLite")
-	timerDb = timer.NewDbTimerRepository(conn)
-	if err := timerDb.Migrate(); err != nil {
-		log.Fatal(err)
-	}
+	// log.Print("Migrating sqlLite")
+	// timerDb = timer.NewDbTimerRepository(conn)
+	// if err := timerDb.Migrate(); err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	// dir := "./static/images"
 
 	r := gin.Default()
-	r.LoadHTMLGlob("/pages")
-
+	r.LoadHTMLGlob("./pages/*")
 
 	r.GET("/", HomeHandler)
-
-	// r.HandleFunc("/")
 	// r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", http.FileServer(http.Dir(dir))))
+	r.Static("/images", "./static/images")
 	// r.HandleFunc("/end", EndTimerHandler)
-	// r.HandleFunc("/registrer-bruker", RegisterHandler)
+	registrerBruker := r.Group("/registrer-bruker")
+	handlers.HandleRegisterUser(registrerBruker)
 
 	// r.HandleFunc("/auth/authenticate/{onetimeCode}", AuthenticateHandler)
 	// //MIDLERTIDIGE
 	// r.HandleFunc("/hent-bruker", GetHandler)
 
-	port, exists = os.LookupEnv("PORT")
+	port, exists := os.LookupEnv("PORT")
 	if !exists {
 		log.Fatal("No env variable named 'PORT' in .env file or environment variable. Exiting")
 	}
-	host, exists = os.LookupEnv("HOSTURL")
-	if !exists {
-		log.Fatal("No env variable named 'HOSTURL' in .env file or environment variable. Exiting")
-	}
+	// host, exists = os.LookupEnv("HOSTURL")
+	// if !exists {
+	// 	log.Fatal("No env variable named 'HOSTURL' in .env file or environment variable. Exiting")
+	// }
 
 	addr := fmt.Sprintf("0.0.0.0:%s", port)
 
@@ -299,9 +298,8 @@ func HomeHandler(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	
 	c.HTML(http.StatusOK, "index.html", nil)
-	
+
 }
 
 func IsAuthorizedUser(s string, i int) {
