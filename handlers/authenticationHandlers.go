@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -10,6 +11,22 @@ import (
 func HandleAuthentication(rg *gin.RouterGroup) {
 	rg.GET("/login", loginPage)
 	rg.POST("/login", loginUser)
+
+	rg.GET("/emailredirect/:authcode", authenticateEmailCode)
+}
+
+func authenticateEmailCode(c *gin.Context) {
+	authcode := c.Param("authcode")
+
+	user, err := timerDb.UserAuthProcess(authcode)
+	if err != nil {
+		c.String(http.StatusUnauthorized, "Error on authentication: %s", err.Error())
+		return
+	}
+	c.SetCookie("userAuthCookie", user.Authcode.String, 0, "/", hostUrl, true, true)
+	c.SetCookie("userId", fmt.Sprintf("%d", user.ID), 0, "/", hostUrl, true, true)
+
+	c.String(http.StatusOK, "Authenticated at %s. Hello %s", authcode, user.Username)
 
 }
 

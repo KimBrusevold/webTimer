@@ -1,8 +1,10 @@
 package timer
 
 import (
+	"crypto/md5"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -26,7 +28,7 @@ func NewDbTimerRepository(db *sql.DB) *TimerDB {
 func (r *TimerDB) Migrate() error {
 	query := `
     CREATE TABLE IF NOT EXISTS users(
-		id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+		id INTEGER NOT NULL PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
         email TEXT NOT NULL UNIQUE,
         onetimecode TEXT,
@@ -44,33 +46,13 @@ func (r *TimerDB) Migrate() error {
 	log.Print("Creating times table if not exists")
 	query = `
 	CREATE TABLE IF NOT EXISTS times(
-        id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-		userid bigint REFERENCES users (id),
-        starttime bigint NOT NULL,
-        endtime bigint NULL,
-		computedtime bigint
+        id INTEGER NOT NULL PRIMARY KEY,
+		userid INTEGER REFERENCES users (id),
+        starttime INTEGER NOT NULL,
+        endtime INTEGER NULL,
+		computedtime INTEGER
     );`
 
-	_, err = r.db.Exec(query)
-
-	if err != nil {
-		return err
-	}
-
-	log.Print("Adding pgcrypto extention")
-	query = `CREATE EXTENSION IF NOT EXISTS pgcrypto;`
-	_, err = r.db.Exec(query)
-
-	if err != nil {
-		return err
-	}
-
-	log.Print("Add md5 function")
-	query = `
-	CREATE OR REPLACE FUNCTION md5(bytea) 
-	RETURNS text AS $$ 
-	SELECT encode(digest($1, 'md5'), 'hex')
-	$$ LANGUAGE SQL STRICT IMMUTABLE;`
 	_, err = r.db.Exec(query)
 
 	if err != nil {
@@ -83,18 +65,20 @@ func (r *TimerDB) Migrate() error {
 func (r *TimerDB) CreateUser(user User) (int64, error) {
 	uid := uuid.New()
 
-	command := `SELECT id FROM users WHERE username = $1 AND email = md5($2)`
-	row := r.db.QueryRow(command, user.Username, user.Email)
+	command := `SELECT id FROM users WHERE username = $1 AND email = $2`
+	md5Email := fmt.Sprintf("%x", md5.Sum([]byte(user.Email)))
+
+	row := r.db.QueryRow(command, user.Username, md5Email)
 	var id int64
 
 	err := row.Scan(&id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			command = `INSERT INTO users(username, email, onetimecode)
-			values($1,md5($2), $3)
-			RETURNING id;` //#d10ca8d11301c2f4993ac2279ce4b930
+			values($1, $2, $3)
+			RETURNING id;`
 
-			row = r.db.QueryRow(command, user.Username, user.Email, uid.String())
+			row = r.db.QueryRow(command, user.Username, md5Email, uid.String())
 
 			err := row.Scan(&id)
 			if err != nil {
@@ -152,8 +136,10 @@ func (r *TimerDB) UserExistsWithUsername(username string) (bool, error) {
 }
 
 func (r *TimerDB) UserExistsWithEmail(email string) (bool, int64, error) {
-	command := `SELECT id FROM users WHERE email = md5($1)`
-	row := r.db.QueryRow(command, email)
+	command := `SELECT id FROM users WHERE email = $1`
+	md5String := fmt.Sprintf("%x", md5.Sum([]byte(email)))
+
+	row := r.db.QueryRow(command, md5String)
 
 	var id int64
 	err := row.Scan(&id)
@@ -168,8 +154,9 @@ func (r *TimerDB) UserExistsWithEmail(email string) (bool, int64, error) {
 }
 
 func (r *TimerDB) SetNewOnetimeCode(email string) (string, error) {
-	command := `SELECT id FROM users WHERE email = md5($1);`
-	row := r.db.QueryRow(command, email)
+	command := `SELECT id FROM users WHERE email = $1;`
+	md5String := fmt.Sprintf("%x", md5.Sum([]byte(email)))
+	row := r.db.QueryRow(command, md5String)
 
 	var id int64
 	if err := row.Scan(&id); err != nil {
@@ -190,7 +177,7 @@ func (r *TimerDB) SetNewOnetimeCode(email string) (string, error) {
 	return uid, nil
 }
 
-func (r *TimerDB) UserAuthProcees(onetimeCode string) (*User, error) {
+func (r *TimerDB) UserAuthProcess(onetimeCode string) (*User, error) {
 	command := `SELECT id, username, email, onetimecode FROM users WHERE onetimecode = $1;`
 
 	row := r.db.QueryRow(command, onetimeCode)
@@ -266,6 +253,34 @@ func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 	_, err = r.db.Exec("UPDATE times SET endtime = $1, computedtime = $2 WHERE id = $3", endtime, computed, id)
 
 	return computed, err
+}
+
+func (r *TimerDB) RetrieveTimes() ([]Timer, error) {
+	query := `SELECT id, userid, computedtime FROM times 
+		WHERE computedtime IS NOT NULL 
+		ORDER BY computedtime ASC`
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var times []Timer
+
+	for rows.Next() {
+		var tim Timer
+		if err := rows.Scan(&tim.ID, &tim.UserID, &tim.ComputedTime); err != nil {
+			return times, err
+		}
+		
+		times = append(times, tim)
+	}
+
+	if err = rows.Err(); err != nil {
+		return times, err
+	}
+
+	return times, nil
 }
 
 func (r *TimerDB) Update(id int64, updated Timer) (*Timer, error) {

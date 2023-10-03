@@ -7,7 +7,6 @@ import (
 
 	"github.com/KimBrusevold/webTimer/handlers"
 	"github.com/KimBrusevold/webTimer/timer"
-	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 
 	"log"
@@ -16,7 +15,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/jackc/pgx/v5/stdlib"
+
+	_ "github.com/libsql/libsql-client-go/libsql"
+	_ "modernc.org/sqlite"
 )
 
 var timerDb *timer.TimerDB
@@ -39,7 +40,7 @@ func main() {
 		log.Fatal("No env variable named 'DB_CONN_STR' in .env file or environment variable. Exiting")
 	}
 	log.Printf("ConnString: %s", connStr)
-	conn, err := sql.Open("pgx", connStr)
+	conn, err := sql.Open("libsql", connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,6 +58,8 @@ func main() {
 	r.LoadHTMLGlob("./pages/*")
 
 	r.GET("/", HomeHandler)
+	r.GET("/avslutt-lop", EndTimerHandler)
+	r.GET("/leaderboard", leaderboard)
 	// r.PathPrefix("/images/").Handler(http.StripPrefix("/images/", http.FileServer(http.Dir(dir))))
 	r.Static("/images", "./static/images")
 	// r.HandleFunc("/end", EndTimerHandler)
@@ -90,79 +93,74 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-func AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	onetimeCode := vars["onetimeCode"]
+type TimesDisplay struct {
+	Place   int
+	UserID  int64
+	Minutes int64
+	Seconds int64
+	Tenths  int64
+}
 
-	if onetimeCode == "" {
-		w.Header().Add("Location", "/registrer-bruker")
-		w.WriteHeader(http.StatusSeeOther)
+func leaderboard(c *gin.Context) {
+	times, err := timerDb.RetrieveTimes()
+	if err != nil {
+		log.Printf("Could not get times from db. %s", err.Error())
+		c.String(http.StatusInternalServerError, "%s", err.Error())
 		return
 	}
 
-	user, err := timerDb.UserAuthProcees(onetimeCode)
-	if err != nil {
-		log.Fatal(err)
+	var timesDisplay []TimesDisplay
+
+	for i, t := range times {
+		// minutes :=  / (60 * 1000) % 60
+		// seconds := timeUsed / (1000) % 60
+		// tenths := timeUsed / (100) % 1000
+		td := TimesDisplay{
+			Place:   i+1,
+			UserID:  t.UserID,
+			Minutes: t.ComputedTime.Int64 / (60 * 1000) % 60,
+			Seconds: t.ComputedTime.Int64 / (1000) % 60,
+			Tenths:  t.ComputedTime.Int64 / (100) % 1000,
+		}
+		timesDisplay = append(timesDisplay, td)
 	}
 
-	userAuthCookie := http.Cookie{
-		Name:     "userAuthCookie",
-		Value:    user.Authcode.String, //Should be some random authString. Signed? "github.com/go-http-utils/cookie"
-		Expires:  time.Now().Add(24 * time.Hour),
-		HttpOnly: true,
-		Secure:   true,
-		Path:     "/",
-	}
-
-	userIdCookie := http.Cookie{
-		Name:     "userId",
-		Value:    strconv.FormatInt(user.ID, 10), //Should be some random authString. Signed? "github.com/go-http-utils/cookie"
-		Expires:  time.Now().Add(24 * time.Hour),
-		HttpOnly: true,
-		Secure:   true,
-		Path:     "/",
-	}
-
-	http.SetCookie(w, &userAuthCookie)
-	http.SetCookie(w, &userIdCookie)
-
-	w.Header().Add("Content-Type", "text/html")
-	w.Write([]byte("You are ready to time go to /"))
+	c.HTML(http.StatusOK, "leaderboard.tmpl", timesDisplay)
 }
 
-func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
-	userCookie, cErr := r.Cookie("userAuthCookie")
+func EndTimerHandler(c *gin.Context) {
+	userCookie, cErr := c.Cookie("userAuthCookie")
 	if cErr != nil {
 		log.Print("User not authenticated. Does not have userAuthCookie")
 		log.Print(cErr.Error())
-		w.Header().Add("Location", "/registrer-bruker")
-		w.WriteHeader(http.StatusSeeOther)
+		c.Header("Location", "/registrer-bruker")
+		c.Status(http.StatusSeeOther)
 		return
 	}
-	idCookie, cErr := r.Cookie("userId")
+	idCookie, cErr := c.Cookie("userId")
 
 	if cErr != nil {
 		log.Print("User not authenticated. Does not have userId cookie")
 		log.Print(cErr.Error())
-		w.Header().Add("Location", "/registrer-bruker")
-		w.WriteHeader(http.StatusSeeOther)
+		c.Header("Location", "/registrer-bruker")
+		c.Status(http.StatusSeeOther)
 		return
 	}
 
-	userId, err := strconv.Atoi(idCookie.Value)
+	userId, err := strconv.Atoi(idCookie)
 	if err != nil {
 		log.Print("Could not get id from cookie")
 		log.Print(cErr.Error())
-		w.Header().Add("Location", "/registrer-bruker")
-		w.WriteHeader(http.StatusSeeOther)
+		c.Header("Location", "/registrer-bruker")
+		c.Status(http.StatusSeeOther)
 		return
 	}
-	isAuthenticated := timerDb.IsAuthorizedUser(userCookie.Value, userId)
+	isAuthenticated := timerDb.IsAuthorizedUser(userCookie, userId)
 	if !isAuthenticated {
 		log.Print("Could not find user with id and auth code")
 		log.Print(cErr.Error())
-		w.Header().Add("Location", "/registrer-bruker")
-		w.WriteHeader(http.StatusSeeOther)
+		c.Header("Location", "/registrer-bruker")
+		c.Status(http.StatusSeeOther)
 		return
 	}
 
@@ -170,18 +168,15 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print("Could not stop timer")
 		log.Print(err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
 	minutes := timeUsed / (60 * 1000) % 60
 	seconds := timeUsed / (1000) % 60
 	tenths := timeUsed / (100) % 1000
-	_, e := w.Write([]byte(fmt.Sprintf("<h1>Du brukte %d min %d.%d sekunder<h2>", minutes, seconds, tenths)))
-	if e != nil {
-		log.Fatal(e)
-		return
-	}
+	c.String(http.StatusOK, "<h1>Du brukte %d min %d.%d sekunder<h2>", minutes, seconds, tenths)
+
 }
 
 func GetHandler(w http.ResponseWriter, r *http.Request) {
