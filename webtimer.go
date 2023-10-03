@@ -62,7 +62,7 @@ func main() {
 	// r.HandleFunc("/end", EndTimerHandler)
 	registrerBruker := r.Group("/registrer-bruker")
 	authGroup := r.Group("/autentisering")
-	handlers.HandleRegisterUser(registrerBruker,timerDb, host)
+	handlers.HandleRegisterUser(registrerBruker, timerDb, host)
 	handlers.HandleAuthentication(authGroup)
 	// r.HandleFunc("/auth/authenticate/{onetimeCode}", AuthenticateHandler)
 	// //MIDLERTIDIGE
@@ -149,7 +149,7 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	i, err := strconv.Atoi(idCookie.Value)
+	userId, err := strconv.Atoi(idCookie.Value)
 	if err != nil {
 		log.Print("Could not get id from cookie")
 		log.Print(cErr.Error())
@@ -157,7 +157,7 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusSeeOther)
 		return
 	}
-	isAuthenticated := timerDb.IsAuthorizedUser(userCookie.Value, i)
+	isAuthenticated := timerDb.IsAuthorizedUser(userCookie.Value, userId)
 	if !isAuthenticated {
 		log.Print("Could not find user with id and auth code")
 		log.Print(cErr.Error())
@@ -166,7 +166,7 @@ func EndTimerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	timeUsed, err := timerDb.EndTimeTimer(i)
+	timeUsed, err := timerDb.EndTimeTimer(userId)
 	if err != nil {
 		log.Print("Could not stop timer")
 		log.Print(err.Error())

@@ -19,6 +19,7 @@ var hostUrl string
 func HandleRegisterUser(rg *gin.RouterGroup, db *timer.TimerDB, host string) {
 	rg.GET("/", registerUserPage)
 	rg.POST("/", createUser)
+	rg.POST("/email", validateEmail)
 
 	timerDb = db
 	hostUrl = host
@@ -158,4 +159,23 @@ func sendAuthMail(userId int64, email string) error {
 
 	log.Printf("Sendgripd response Status: %s", response.Status)
 	return nil
+}
+
+func validateEmail(c *gin.Context) {
+	log.Printf("Validating email")
+	email := c.PostForm("email")
+	emailParts := strings.Split(email, "@")
+
+	if len(emailParts) != 2 || emailParts[1] != "sporasteria.com" {
+		returnForm := `
+		<div hx-target="this" hx-swap="outerHTML">
+        	<label for="email">Din epost: </label>
+        	<input hx-post="/registrer-bruker/email" type="email" name="email" id="email" value="%s" required />
+			<div class='error-message'>Ugyldig epost. Kun Sopra Steria kan registrere seg på dette tidspunktet</div>
+      	</div>
+		`
+		c.String(http.StatusOK, returnForm, email)
+		log.Printf("Invalid email %s", email)
+		return
+	}
 }
