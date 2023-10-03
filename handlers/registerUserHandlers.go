@@ -1,17 +1,27 @@
 package handlers
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/KimBrusevold/webTimer/timer"
 	"github.com/gin-gonic/gin"
 )
 
-func HandleRegisterUser(rg *gin.RouterGroup) {
+var timerDb *timer.TimerDB
+var hostUrl string
+
+func HandleRegisterUser(rg *gin.RouterGroup, db *timer.TimerDB, host string) {
 	rg.GET("/", registerUserPage)
 	rg.POST("/", createUser)
+
+	timerDb = db
+	hostUrl = host
 }
 
 func registerUserPage(c *gin.Context) {
@@ -37,48 +47,115 @@ func createUser(c *gin.Context) {
 		c.String(http.StatusBadRequest, "Ugyldig epost")
 		return
 	}
-	if v[1] != "soprasteria.com" {
-		log.Printf("User with email-domain: %s tried to sign up.", v[1])
-		c.String(http.StatusBadRequest, "Beklager, du kan ikke registrere deg (enda)")
-		return
-	}
+	// else if v[1] != "soprasteria.com" {
+	// 	log.Printf("User with email-domain: %s tried to sign up.", v[1])
+	// 	//TODO: Give better response here.
+	// 	c.String(http.StatusBadRequest, "Beklager, du kan ikke registrere deg (enda)")
+	// 	return
+	// }
 
 	log.Printf("Username: %s \n", user.Username)
 	log.Printf("Email: %s \n", user.Email)
 
-	c.String(http.StatusOK, "Username: %s, Email: %s", user.Username, user.Email)
-	return
+	//Is username used before?
+	usernameExists, err := timerDb.UserExistsWithUsername(user.Username)
+	if usernameExists {
+		log.Printf("User with username: %s Already exists.", user.Username)
+		//TODO: Give better response here.
+		c.String(http.StatusUnprocessableEntity, "Brukernavn %s er allerede tatt", user.Username)
+		return
+	}
+	if err != nil {
+		log.Printf("Noe gikk galt under DB kall %s", err.Error())
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	//Is email used before?
+	emailExists, _, err := timerDb.UserExistsWithEmail(user.Email)
+	if emailExists {
+		log.Printf("Email: %s is already in use.", user.Email)
+		//TODO: Give better response here? Shouldn't inform that this email is in use. Makes scraping possible
+		c.String(http.StatusBadRequest, "Noe gikk galt. Prøv igjen senere")
+		return
+	}
+	if err != nil {
+		log.Printf("Noe gikk galt under DB kall:\n%s", err.Error())
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	//Create user
+	userid, err := timerDb.CreateUser(user)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Noe gikk galt under lagring av brukereren. Prøv på nytt senere")
+		log.Printf("Error on create: \n%s", err.Error())
+		return
+	}
 
-	// user := timer.User{
-	// 	Username: username,
-	// 	Email:    email,
-	// }
+	err = sendAuthMail(userid, user.Email)
+	if err != nil {
+		log.Printf("Something went wrong sending email to user. \n%s", err.Error())
+		c.String(http.StatusInternalServerError, "Noe gikk galt under utsendelse av bekreftelses e-post. Forsøk å logge inn med din epost adresse på nytt", nil)
+		return
+	}
 
-	// userid, err := timerDb.CreateUser(user)
-	// if err != nil {
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	log.Print("Error on create: \n")
-	// 	log.Print(err.Error())
-	// 	return
-	// }
+	c.HTML(http.StatusOK, "email-sent.html", nil)
+}
 
-	// err = SendAuthMail(userid, email)
-	// if err != nil {
-	// 	w.Write([]byte("Something went wrong"))
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	return
-	// }
+func sendAuthMail(userId int64, email string) error {
+	res, err := timerDb.GetUser(userId)
+	if err != nil {
+		log.Print("Could not retrieve")
+		log.Print(err.Error())
+		return err
+	}
 
-	// content, err := os.ReadFile("./pages/email-sent.html")
-	// if err != nil {
-	// 	log.Print("ERROR: Could not read email-sent.html from file")
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	return
-	// }
-	// _, err = w.Write(content)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// 	return
-	// }
+	templateId := "d-67cb50f335c44f85a8960612dc97e7bc"
+	httpposturl := "https://api.sendgrid.com/v3/mail/send"
 
+	redirectUrl := fmt.Sprintf("%s/autentisering/emailredirect/%s", hostUrl, res.OneTimeCode.String)
+	log.Printf("Redirect url to: %s", redirectUrl)
+	postString := fmt.Sprintf(`{
+		"from":{
+			"email":"kim.brusevold@soprasteria.com"
+		 },
+		 "personalizations":[
+			{
+			   "to":[
+				  {
+					 "email":"%s"
+				  }
+			   ],
+			   "dynamic_template_data":{
+				  "url": "%s"
+				}
+			}
+		 ],
+		 "template_id":"%s"
+	}`, email, redirectUrl, templateId)
+
+	postdata := []byte(postString)
+	request, err := http.NewRequest("POST", httpposturl, bytes.NewBuffer(postdata))
+	if err != nil {
+		log.Printf("Klarte ikke å forberede request for å sende template. %s", err.Error())
+		return err
+	}
+	request.Header.Set("Content-Type", "application/json;")
+	sendgridApiKey, exists := os.LookupEnv("SENDGRID_API_KEY")
+	if !exists {
+		log.Print("No env variable named 'SENDGRID_API_KEY' in .env file or environment variable. Exiting")
+		return errors.New("no env variable named 'SENDGRID_API_KEY' found. Cannot send email")
+	}
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", sendgridApiKey))
+
+	log.Printf("Forsøker å sende epost til bruker med epost %s", email)
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		log.Printf("Error when sending email request to SendGrid. \n %s", err.Error())
+		return err
+	}
+	defer response.Body.Close()
+
+	log.Printf("Sendgripd response Status: %s", response.Status)
+	return nil
 }

@@ -135,6 +135,61 @@ func (r *TimerDB) GetUser(userid int64) (*User, error) {
 	return &user, err
 }
 
+func (r *TimerDB) UserExistsWithUsername(username string) (bool, error) {
+	command := `SELECT id FROM users WHERE username = $1`
+	row := r.db.QueryRow(command, username)
+
+	var id int64
+	err := row.Scan(&id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+func (r *TimerDB) UserExistsWithEmail(email string) (bool, int64, error) {
+	command := `SELECT id FROM users WHERE email = md5($1)`
+	row := r.db.QueryRow(command, email)
+
+	var id int64
+	err := row.Scan(&id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, -1, nil
+		} else {
+			return false, -1, err
+		}
+	}
+	return true, id, nil
+}
+
+func (r *TimerDB) SetNewOnetimeCode(email string) (string, error) {
+	command := `SELECT id FROM users WHERE email = md5($1);`
+	row := r.db.QueryRow(command, email)
+
+	var id int64
+	if err := row.Scan(&id); err != nil {
+		return "", err
+	}
+
+	command = `UPDATE users SET 
+		onetimecode = $1,
+		authcode = NULL
+		WHERE id = $2;`
+
+	uid := uuid.New().String()
+	_, err := r.db.Exec(command, uid, id)
+	if err != nil {
+		return "", err
+	}
+
+	return uid, nil
+}
+
 func (r *TimerDB) UserAuthProcees(onetimeCode string) (*User, error) {
 	command := `SELECT id, username, email, onetimecode FROM users WHERE onetimecode = $1;`
 
@@ -198,7 +253,7 @@ func (r *TimerDB) StartTimer(userId int) error {
 func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 	query := `SELECT id, starttime FROM times WHERE userid = $1 AND endtime IS NULL`
 	row := r.db.QueryRow(query, userId)
-	
+
 	var id int64
 	var startTime int64
 	err := row.Scan(&id, &startTime)

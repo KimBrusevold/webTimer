@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	"database/sql"
 	"fmt"
 	"strconv"
 
@@ -29,22 +29,27 @@ func main() {
 	} else {
 		log.Print("Loaded variables from .env file")
 	}
-	// _, exists := os.LookupEnv("DATABASE_URL")
-	// if !exists {
-	// 	log.Fatal("No env variable named 'DB_CONN_STR' in .env file or environment variable. Exiting")
-	// }
+	hostUrl, exists := os.LookupEnv("HOSTURL")
+	if !exists {
+		log.Fatal("No rnv variable named 'HOSTURL' in .env file or environment variable. Exiting")
+	}
+	host = hostUrl
+	connStr, exists := os.LookupEnv("DATABASE_URL")
+	if !exists {
+		log.Fatal("No env variable named 'DB_CONN_STR' in .env file or environment variable. Exiting")
+	}
+	log.Printf("ConnString: %s", connStr)
+	conn, err := sql.Open("pgx", connStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
 
-	// conn, err := sql.Open("pgx", connStr)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer conn.Close()
-
-	// log.Print("Migrating sqlLite")
-	// timerDb = timer.NewDbTimerRepository(conn)
-	// if err := timerDb.Migrate(); err != nil {
-	// 	log.Fatal(err)
-	// }
+	log.Print("Migrating sqlLite")
+	timerDb = timer.NewDbTimerRepository(conn)
+	if err := timerDb.Migrate(); err != nil {
+		log.Fatal(err)
+	}
 
 	// dir := "./static/images"
 
@@ -56,8 +61,9 @@ func main() {
 	r.Static("/images", "./static/images")
 	// r.HandleFunc("/end", EndTimerHandler)
 	registrerBruker := r.Group("/registrer-bruker")
-	handlers.HandleRegisterUser(registrerBruker)
-
+	authGroup := r.Group("/autentisering")
+	handlers.HandleRegisterUser(registrerBruker,timerDb, host)
+	handlers.HandleAuthentication(authGroup)
 	// r.HandleFunc("/auth/authenticate/{onetimeCode}", AuthenticateHandler)
 	// //MIDLERTIDIGE
 	// r.HandleFunc("/hent-bruker", GetHandler)
@@ -189,64 +195,6 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte(res.Username))
 
-}
-
-func SendAuthMail(userId int64, email string) error {
-	res, err := timerDb.GetUser(userId)
-	if err != nil {
-		log.Print("Could not retrieve")
-		log.Print(err.Error())
-		return err
-	}
-
-	templateId := "d-67cb50f335c44f85a8960612dc97e7bc"
-	httpposturl := "https://api.sendgrid.com/v3/mail/send"
-
-	redirectUrl := fmt.Sprintf("%s/auth/authenticate/authenticate/%s", host, res.OneTimeCode.String)
-
-	postString := fmt.Sprintf(`{
-		"from":{
-			"email":"kim.brusevold@soprasteria.com"
-		 },
-		 "personalizations":[
-			{
-			   "to":[
-				  {
-					 "email":"%s"
-				  }
-			   ],
-			   "dynamic_template_data":{
-				  "url": "%s"
-				}
-			}
-		 ],
-		 "template_id":"%s"
-	}`, email, redirectUrl, templateId)
-
-	log.Print(postString)
-
-	postdata := []byte(postString)
-	request, err := http.NewRequest("POST", httpposturl, bytes.NewBuffer(postdata))
-	if err != nil {
-		log.Fatal("Klarte ikke å forberede request for å sende template")
-	}
-	request.Header.Set("Content-Type", "application/json;")
-	sendgridApiKey, exists := os.LookupEnv("SENDGRID_API_KEY")
-	if !exists {
-		log.Fatal("No env variable named 'SENDGRID_API_KEY' in .env file or environment variable. Exiting")
-	}
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", sendgridApiKey))
-
-	client := &http.Client{}
-	response, err := client.Do(request)
-	if err != nil {
-		log.Panic(err)
-	}
-	defer response.Body.Close()
-
-	log.Printf("Sendgripd response Status: %s", response.Status)
-
-	return nil
 }
 
 func HomeHandler(c *gin.Context) {
