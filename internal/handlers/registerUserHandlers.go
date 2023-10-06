@@ -38,6 +38,8 @@ func createUser(c *gin.Context) {
 	}
 	user.Username = strings.TrimSpace(user.Username)
 	user.Email = strings.TrimSpace(user.Email)
+
+	log.Printf("verifiserer og skaper bruker med brukernavn: %s, og epost: %s", user.Username, user.Email)
 	//TODO: Denne bør sette error i form = Epost og brukernavn er påkrevde felter.
 	if user.Email == "" || user.Username == "" {
 		log.Print("Could not bind form data to user")
