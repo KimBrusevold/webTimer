@@ -65,7 +65,7 @@ func (r *TimerDB) Migrate() error {
 func (r *TimerDB) CreateUser(user User) (int64, error) {
 	uid := uuid.New()
 
-	command := `SELECT id FROM users WHERE username = $1 AND email = $2`
+	command := `SELECT id FROM users WHERE username = ? AND email = ?`
 	md5Email := fmt.Sprintf("%x", md5.Sum([]byte(user.Email)))
 
 	row := r.db.QueryRow(command, user.Username, md5Email)
@@ -75,7 +75,7 @@ func (r *TimerDB) CreateUser(user User) (int64, error) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			command = `INSERT INTO users(username, email, onetimecode)
-			values($1, $2, $3)
+			values(?, ?, ?)
 			RETURNING id;`
 
 			row = r.db.QueryRow(command, user.Username, md5Email, uid.String())
@@ -91,9 +91,9 @@ func (r *TimerDB) CreateUser(user User) (int64, error) {
 	}
 
 	command = `UPDATE users SET 
-		onetimecode = $1,
+		onetimecode = ?,
 		authcode = NULL
-		WHERE id = $2;`
+		WHERE id = ?;`
 
 	_, err = r.db.Exec(command, uid.String(), id)
 
@@ -105,7 +105,7 @@ func (r *TimerDB) CreateUser(user User) (int64, error) {
 }
 
 func (r *TimerDB) GetUser(userid int64) (*User, error) {
-	command := `SELECT id, username, email, onetimecode FROM users WHERE id = $1;`
+	command := `SELECT id, username, email, onetimecode FROM users WHERE id = ?;`
 
 	row := r.db.QueryRow(command, userid)
 
@@ -120,7 +120,7 @@ func (r *TimerDB) GetUser(userid int64) (*User, error) {
 }
 
 func (r *TimerDB) UserExistsWithUsername(username string) (bool, error) {
-	command := `SELECT id FROM users WHERE username = $1`
+	command := `SELECT id FROM users WHERE username = ?`
 	row := r.db.QueryRow(command, username)
 
 	var id int64
@@ -136,7 +136,7 @@ func (r *TimerDB) UserExistsWithUsername(username string) (bool, error) {
 }
 
 func (r *TimerDB) UserExistsWithEmail(email string) (bool, int64, error) {
-	command := `SELECT id FROM users WHERE email = $1`
+	command := `SELECT id FROM users WHERE email = ?`
 	md5String := fmt.Sprintf("%x", md5.Sum([]byte(email)))
 
 	row := r.db.QueryRow(command, md5String)
@@ -154,7 +154,7 @@ func (r *TimerDB) UserExistsWithEmail(email string) (bool, int64, error) {
 }
 
 func (r *TimerDB) SetNewOnetimeCode(email string) (string, error) {
-	command := `SELECT id FROM users WHERE email = $1;`
+	command := `SELECT id FROM users WHERE email = ?;`
 	md5String := fmt.Sprintf("%x", md5.Sum([]byte(email)))
 	row := r.db.QueryRow(command, md5String)
 
@@ -164,9 +164,9 @@ func (r *TimerDB) SetNewOnetimeCode(email string) (string, error) {
 	}
 
 	command = `UPDATE users SET 
-		onetimecode = $1,
+		onetimecode = ?,
 		authcode = NULL
-		WHERE id = $2;`
+		WHERE id = ?;`
 
 	uid := uuid.New().String()
 	_, err := r.db.Exec(command, uid, id)
@@ -178,7 +178,7 @@ func (r *TimerDB) SetNewOnetimeCode(email string) (string, error) {
 }
 
 func (r *TimerDB) UserAuthProcess(onetimeCode string) (*User, error) {
-	command := `SELECT id, username, email, onetimecode FROM users WHERE onetimecode = $1;`
+	command := `SELECT id, username, email, onetimecode FROM users WHERE onetimecode = ?;`
 
 	row := r.db.QueryRow(command, onetimeCode)
 
@@ -190,8 +190,8 @@ func (r *TimerDB) UserAuthProcess(onetimeCode string) (*User, error) {
 	}
 	command = `UPDATE users SET 
 		onetimecode = NULL,
-		authcode = $1
-		WHERE id = $2;`
+		authcode = ?
+		WHERE id = ?;`
 
 	uid := uuid.New().String()
 	_, err = r.db.Exec(command, uid, user.ID)
@@ -204,7 +204,7 @@ func (r *TimerDB) UserAuthProcess(onetimeCode string) (*User, error) {
 }
 
 func (r *TimerDB) IsAuthorizedUser(authcode string, id int) bool {
-	command := `SELECT id WHERE id = $1 AND authcode = $2`
+	command := `SELECT id WHERE id = ? AND authcode = ?`
 
 	row := r.db.QueryRow(command, id, authcode)
 	var resid int64
@@ -230,7 +230,7 @@ func (r *TimerDB) Create(timer Timer) (*Timer, error) {
 
 func (r *TimerDB) StartTimer(userId int) error {
 	startTime := time.Now().UnixMilli()
-	command := `INSERT INTO times(starttime, userid) values($1,$2)`
+	command := `INSERT INTO times(starttime, userid) values(?,?)`
 	_, err := r.db.Exec(command, startTime, userId)
 	if err != nil {
 		return err
@@ -238,7 +238,7 @@ func (r *TimerDB) StartTimer(userId int) error {
 	return nil
 }
 func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
-	query := `SELECT id, starttime FROM times WHERE userid = $1 AND endtime IS NULL`
+	query := `SELECT id, starttime FROM times WHERE userid = ? AND endtime IS NULL`
 	row := r.db.QueryRow(query, userId)
 
 	var id int64
@@ -250,7 +250,7 @@ func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 
 	endtime := time.Now().UnixMilli()
 	computed := endtime - startTime
-	_, err = r.db.Exec("UPDATE times SET endtime = $1, computedtime = $2 WHERE id = $3", endtime, computed, id)
+	_, err = r.db.Exec("UPDATE times SET endtime = ?, computedtime = ? WHERE id = ?", endtime, computed, id)
 
 	return computed, err
 }
@@ -272,7 +272,7 @@ func (r *TimerDB) RetrieveTimes() ([]Timer, error) {
 		if err := rows.Scan(&tim.ID, &tim.UserID, &tim.ComputedTime); err != nil {
 			return times, err
 		}
-		
+
 		times = append(times, tim)
 	}
 
