@@ -58,7 +58,8 @@ func loginUser(c *gin.Context) {
 	}
 	if !usernameExists {
 		log.Printf("Exists no user with email address: %s", email)
-		c.Status(http.StatusInternalServerError)
+		c.Header("Location", "/registrer-bruker")
+		c.Status(http.StatusSeeOther)
 		return
 	}
 
