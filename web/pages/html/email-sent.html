@@ -7,6 +7,12 @@
 </head>
 <body>
 <div class="login-box">
-  <h2>Se etter link i din innboks</h2>
+  <main>
+    <p>Du bør snart motta en engangskode på epost. Bruk denne for å verifisere.</p>
+    <form action="/autentisering/engangskode" method="post">
+      <input type="text" placeholder="Din engangskode" name="onetimecode"/>
+      <button type="submit">Logg inn</button>
+    </form>
+  </main>
 </body>
 </html>

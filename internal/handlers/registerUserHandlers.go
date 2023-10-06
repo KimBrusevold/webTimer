@@ -50,13 +50,11 @@ func createUser(c *gin.Context) {
 		log.Printf("Invalid email: %s", user.Email)
 		c.String(http.StatusBadRequest, "Ugyldig epost")
 		return
+	} else if v[1] != "soprasteria.com" {
+		log.Printf("User with email-domain: %s tried to sign up.", v[1])
+		c.String(http.StatusBadRequest, "Beklager, du kan ikke registrere deg (enda)")
+		return
 	}
-	// else if v[1] != "soprasteria.com" {
-	// 	log.Printf("User with email-domain: %s tried to sign up.", v[1])
-	// 	//TODO: Give better response here.
-	// 	c.String(http.StatusBadRequest, "Beklager, du kan ikke registrere deg (enda)")
-	// 	return
-	// }
 
 	log.Printf("Username: %s \n", user.Username)
 	log.Printf("Email: %s \n", user.Email)
@@ -102,7 +100,8 @@ func createUser(c *gin.Context) {
 		return
 	}
 
-	c.HTML(http.StatusOK, "email-sent.html", nil)
+	c.Header("Location", "/autentisering/engangskode")
+	c.Status(http.StatusSeeOther)
 }
 
 func sendAuthMail(userId int64, email string) error {
@@ -116,13 +115,11 @@ func sendAuthMail(userId int64, email string) error {
 	templateId := "d-67cb50f335c44f85a8960612dc97e7bc"
 	httpposturl := "https://api.sendgrid.com/v3/mail/send"
 
-	redirectUrl := fmt.Sprintf("%s/autentisering/emailredirect/%s", hostUrl, res.OneTimeCode.String)
-	log.Printf("Redirect url to: %s", redirectUrl)
 	postString := fmt.Sprintf(`{
 		"from":{
 			"email":"kim.nilsenbrusevold@outlook.com"
 		 },
-		 "personalizations":[@
+		 "personalizations":[
 			{
 			   "to":[
 				  {
@@ -135,7 +132,7 @@ func sendAuthMail(userId int64, email string) error {
 			}
 		 ],
 		 "template_id":"%s"
-	}`, email, redirectUrl, templateId)
+	}`, email, res.OneTimeCode.String, templateId)
 
 	postdata := []byte(postString)
 	request, err := http.NewRequest("POST", httpposturl, bytes.NewBuffer(postdata))

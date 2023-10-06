@@ -12,11 +12,16 @@ func HandleAuthentication(rg *gin.RouterGroup) {
 	rg.GET("/login", loginPage)
 	rg.POST("/login", loginUser)
 
-	rg.GET("/emailredirect/:authcode", authenticateEmailCode)
+	rg.GET("/engangskode", onetimeCode)
+	rg.POST("/engangskode", authenticateEmailCode)
+
+}
+func onetimeCode(c *gin.Context) {
+	c.HTML(http.StatusOK, "email-sent.html", nil)
 }
 
 func authenticateEmailCode(c *gin.Context) {
-	authcode := c.Param("authcode")
+	authcode := c.PostForm("onetimecode")
 
 	user, err := timerDb.UserAuthProcess(authcode)
 	if err != nil {
@@ -26,7 +31,8 @@ func authenticateEmailCode(c *gin.Context) {
 	c.SetCookie("userAuthCookie", user.Authcode.String, 0, "/", hostUrl, true, true)
 	c.SetCookie("userId", fmt.Sprintf("%d", user.ID), 0, "/", hostUrl, true, true)
 
-	c.String(http.StatusOK, "Authenticated at %s. Hello %s", authcode, user.Username)
+	c.Header("Location", "/")
+	c.Status(http.StatusSeeOther)
 
 }
 
@@ -65,4 +71,6 @@ func loginUser(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
+	c.Header("Location", "/autentisering/engangskode")
+	c.Status(http.StatusSeeOther)
 }
