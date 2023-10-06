@@ -39,7 +39,7 @@ func main() {
 	if !exists {
 		log.Fatal("No env variable named 'DATABASE_URL' in .env file or environment variable. Exiting")
 	}
-	log.Printf("ConnString: %s", connStr)
+	log.Print("DATABASE_URL is provided")
 	conn, err := sql.Open("libsql", connStr)
 	if err != nil {
 		log.Fatal(err)
