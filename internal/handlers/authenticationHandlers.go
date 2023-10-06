@@ -51,8 +51,13 @@ func loginUser(c *gin.Context) {
 
 	usernameExists, id, err := timerDb.UserExistsWithEmail(email)
 
-	if err != nil || !usernameExists {
-		log.Printf("Kunne ikke logge inn bruker. Bruker finnes: %t. DB feil: %s", usernameExists, err.Error())
+	if err != nil {
+		log.Printf("Kunne ikke logge inn bruker. DB feil: %s", err.Error())
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	if !usernameExists {
+		log.Printf("Exists no user with email address: %s", email)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
