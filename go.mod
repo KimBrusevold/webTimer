@@ -5,7 +5,6 @@ go 1.21
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.3.1
-	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/libsql/libsql-client-go v0.0.0-20230917132930-48c310b27e7b
 	modernc.org/sqlite v1.26.0

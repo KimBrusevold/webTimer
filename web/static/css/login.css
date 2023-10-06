@@ -1,0 +1,36 @@
+html, body {
+    padding: 0px;
+    margin: 0px;
+}
+body {
+  height: 75vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #2d0a52;
+}
+
+.login-box {
+  color: #eeede7;
+  font-family: monospace;
+  padding: 0.5em;
+  background-color: #5f338e;
+  border-radius: 10px;
+}
+.form-example {
+  padding: 10px; 
+}
+input {
+  width: 100%;
+}
+a:visited {
+  font-weight: bolder;
+  color: #eeede7;
+  
+}
+a {
+  font-weight: bolder;
+  color: #1fbc83;
+  
+}
