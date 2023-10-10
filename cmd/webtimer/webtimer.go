@@ -61,6 +61,7 @@ func main() {
 	r.GET("/leaderboard", leaderboard)
 	r.Static("/images", "./web/static/images")
 	r.Static("/css", "./web/static/css")
+	r.Static("/scripts", "./web/static/scripts")
 	r.StaticFile("/favicon.ico", "./web/static/images/upstairs.png")
 	registrerBruker := r.Group("/registrer-bruker")
 	authGroup := r.Group("/autentisering")
