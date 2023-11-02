@@ -33,7 +33,6 @@ func authenticateEmailCode(c *gin.Context) {
 
 	c.Header("Location", "/")
 	c.Status(http.StatusSeeOther)
-
 }
 
 func loginPage(c *gin.Context) {
