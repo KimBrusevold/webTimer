@@ -4,25 +4,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/x-icon" href="/images/upstairs.png">
-  <title>Værste Trappeløp - Leaderboard</title>
+  <link rel="icon" type="image/x-icon" href="/res/images/upstairs.png">
+  <link rel="stylesheet" href="/res/css/style.css">
+  <title>Værste Trappeløp - Resultater</title>
 </head>
 
 <body>
-    <h2>Leaderboard</h2>
-    <table>
-      <tr>
-        <th>Plassering</th>
-        <th>Bruker</th>
-        <th>Tid (min:sek.t)</th>
-      </tr>
+  <main>
+    <h1 class="text-center">Resultater</h1>
+    <div class="main-container">
       {{ range . }}
-      <tr>
-        <td>{{ .Place }}</td>
-        <td>{{ .UserID }}</td>
-        <td>{{ .Minutes }}:{{ .Seconds }}.{{ .Tenths }}</td>
-      </tr>
+      <div class="result">
+          <span>{{ .Place }}</span><span>{{ .UserID }}</span><span>{{ .Minutes }}</span><span></span>
+        </div>
       {{ end }}
-    </table>
+    </div>
+  </main>
 </body>
+
 </html>
