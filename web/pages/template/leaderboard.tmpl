@@ -15,7 +15,7 @@
     <div class="main-container">
       {{ range . }}
       <div class="result">
-          <span>{{ .Place }}</span><span>{{ .UserID }}</span><span>{{ .Minutes }}</span><span></span>
+          <span>{{ .Place }}</span><span>{{ .Username }}</span><span>{{ .Minutes }}m</span><span>{{ .Seconds }}.{{ .Tenths }}s</span>
         </div>
       {{ end }}
     </div>
