@@ -52,11 +52,12 @@ func createUser(c *gin.Context) {
 		log.Printf("Invalid email: %s", user.Email)
 		c.String(http.StatusBadRequest, "Ugyldig epost")
 		return
-	} else if v[1] != "soprasteria.com" {
-		log.Printf("User with email-domain: %s tried to sign up.", v[1])
-		c.String(http.StatusBadRequest, "Beklager, du kan ikke registrere deg (enda)")
-		return
-	}
+	} 
+	// else if v[1] != "soprasteria.com" {
+	// 	log.Printf("User with email-domain: %s tried to sign up.", v[1])
+	// 	c.String(http.StatusBadRequest, "Beklager, du kan ikke registrere deg (enda)")
+	// 	return
+	// }
 
 	log.Printf("Username: %s \n", user.Username)
 	log.Printf("Email: %s \n", user.Email)

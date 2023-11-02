@@ -255,21 +255,27 @@ func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 	return computed, err
 }
 
-func (r *TimerDB) RetrieveTimes() ([]Timer, error) {
-	query := `SELECT id, userid, computedtime FROM times 
-		WHERE computedtime IS NOT NULL 
-		ORDER BY computedtime ASC`
+type RetrieveTimesResponse struct {
+	Place       int
+	Username     string
+	ComputedTime int64
+}
+
+func (r *TimerDB) RetrieveTimes() ([]RetrieveTimesResponse, error) {
+	query := `SELECT ROW_NUMBER () OVER (ORDER BY times.computedtime ASC) rownum, min(times.computedtime), username FROM times 
+		INNER JOIN users on users.id = userid 
+		GROUP BY userid;`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var times []Timer
+	var times []RetrieveTimesResponse
 
 	for rows.Next() {
-		var tim Timer
-		if err := rows.Scan(&tim.ID, &tim.UserID, &tim.ComputedTime); err != nil {
+		var tim RetrieveTimesResponse
+		if err := rows.Scan(&tim.Place, &tim.ComputedTime, &tim.Username); err != nil {
 			return times, err
 		}
 
