@@ -256,14 +256,15 @@ func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 }
 
 type RetrieveTimesResponse struct {
-	Place       int
+	Place        int
 	Username     string
 	ComputedTime int64
 }
 
 func (r *TimerDB) RetrieveTimes() ([]RetrieveTimesResponse, error) {
 	query := `SELECT ROW_NUMBER () OVER (ORDER BY times.computedtime ASC) rownum, min(times.computedtime), username FROM times 
-		INNER JOIN users on users.id = userid 
+		INNER JOIN users on users.id = userid
+		WHERE times.computedtime IS NOT NULL
 		GROUP BY userid;`
 	rows, err := r.db.Query(query)
 	if err != nil {
