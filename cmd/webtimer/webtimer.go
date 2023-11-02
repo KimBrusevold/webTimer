@@ -56,15 +56,20 @@ func main() {
 
 	r := gin.Default()
 	r.LoadHTMLGlob("./web/pages/**/*")
-	r.GET("/", HomeHandler)
-	r.GET("/avslutt-lop", EndTimerHandler)
-	r.GET("/leaderboard", leaderboard)
-	r.Static("/images", "./web/static/images")
-	r.Static("/css", "./web/static/css")
-	r.Static("/scripts", "./web/static/scripts")
+	r.GET("/", leaderboard)
+
+	r.Static("/res/images", "./web/static/images")
+	r.Static("/res/css", "./web/static/css")
+	r.Static("/res/scripts", "./web/static/scripts")
 	r.StaticFile("/favicon.ico", "./web/static/images/upstairs.png")
+
 	registrerBruker := r.Group("/registrer-bruker")
 	authGroup := r.Group("/autentisering")
+
+	r.Use(authenticate)
+	r.GET("/timer/start-lop", startTimerHandler)
+	r.GET("/timer/avslutt-lop", endTimerHandler)
+
 	handlers.HandleRegisterUser(registrerBruker, timerDb, host)
 	handlers.HandleAuthentication(authGroup)
 
@@ -91,11 +96,55 @@ func main() {
 }
 
 type TimesDisplay struct {
-	Place   int
-	UserID  int64
-	Minutes int64
-	Seconds int64
-	Tenths  int64
+	Place    int
+	Username string
+	Minutes  int64
+	Seconds  int64
+	Tenths   int64
+}
+
+func authenticate(c *gin.Context) {
+	userCookie, cErr := c.Cookie("userAuthCookie")
+	if cErr != nil {
+		log.Print("User not authenticated. Does not have userAuthCookie")
+		log.Print(cErr.Error())
+		c.Header("Location", "/autentisering/login")
+		c.Status(http.StatusSeeOther)
+		c.Abort()
+		return
+	}
+
+	idCookie, cErr := c.Cookie("userId")
+	if cErr != nil {
+		log.Print("User not authenticated. Does not have userId cookie")
+		log.Print(cErr.Error())
+		c.Header("Location", "/autentisering/login")
+		c.Status(http.StatusSeeOther)
+		c.Abort()
+		return
+	}
+
+	i, err := strconv.Atoi(idCookie)
+	if err != nil {
+		log.Print("Could not get id from cookie")
+		log.Print(cErr.Error())
+		c.Header("Location", "/autentisering/login")
+		c.Status(http.StatusSeeOther)
+		c.Abort()
+		return
+	}
+
+	isAuthenticated := timerDb.IsAuthorizedUser(userCookie, i)
+	if !isAuthenticated {
+		log.Print("Could not find user with id and auth code")
+		log.Print(cErr.Error())
+		c.Header("Location", "/autentisering/login")
+		c.Status(http.StatusSeeOther)
+		c.Abort()
+		return
+	}
+
+	c.Set("userId", i)
 }
 
 func leaderboard(c *gin.Context) {
@@ -113,11 +162,11 @@ func leaderboard(c *gin.Context) {
 		// seconds := timeUsed / (1000) % 60
 		// tenths := timeUsed / (100) % 1000
 		td := TimesDisplay{
-			Place:   i + 1,
-			UserID:  t.UserID,
-			Minutes: t.ComputedTime.Int64 / (60 * 1000) % 60,
-			Seconds: t.ComputedTime.Int64 / (1000) % 60,
-			Tenths:  t.ComputedTime.Int64 / (100) % 1000,
+			Place:    i + 1,
+			Username: t.Username,
+			Minutes:  t.ComputedTime / (60 * 1000) % 60,
+			Seconds:  t.ComputedTime / (1000) % 60,
+			Tenths:   t.ComputedTime / (100) % 1000,
 		}
 		timesDisplay = append(timesDisplay, td)
 	}
@@ -125,43 +174,15 @@ func leaderboard(c *gin.Context) {
 	c.HTML(http.StatusOK, "leaderboard.tmpl", timesDisplay)
 }
 
-func EndTimerHandler(c *gin.Context) {
-	userCookie, cErr := c.Cookie("userAuthCookie")
-	if cErr != nil {
-		log.Print("User not authenticated. Does not have userAuthCookie")
-		log.Print(cErr.Error())
-		c.Header("Location", "/autentisering/login")
-		c.Status(http.StatusSeeOther)
-		return
-	}
-	idCookie, cErr := c.Cookie("userId")
-
-	if cErr != nil {
-		log.Print("User not authenticated. Does not have userId cookie")
-		log.Print(cErr.Error())
-		c.Header("Location", "/autentisering/login")
-		c.Status(http.StatusSeeOther)
+func endTimerHandler(c *gin.Context) {
+	i, exists := c.Get("userId")
+	if !exists {
+		log.Print("Found no userId in context. Cannot start timer")
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
-	userId, err := strconv.Atoi(idCookie)
-	if err != nil {
-		log.Print("Could not get id from cookie")
-		log.Print(cErr.Error())
-		c.Header("Location", "/autentisering/login")
-		c.Status(http.StatusSeeOther)
-		return
-	}
-	isAuthenticated := timerDb.IsAuthorizedUser(userCookie, userId)
-	if !isAuthenticated {
-		log.Print("Could not find user with id and auth code")
-		log.Print(cErr.Error())
-		c.Header("Location", "/autentisering/login")
-		c.Status(http.StatusSeeOther)
-		return
-	}
-
-	timeUsed, err := timerDb.EndTimeTimer(userId)
+	timeUsed, err := timerDb.EndTimeTimer(i.(int))
 	if err != nil {
 		log.Print("Could not stop timer")
 		log.Print(err.Error())
@@ -176,56 +197,14 @@ func EndTimerHandler(c *gin.Context) {
 
 }
 
-func GetHandler(w http.ResponseWriter, r *http.Request) {
-	res, err := timerDb.GetUser(1)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("Could not retrieve")
-		log.Print(err.Error())
+func startTimerHandler(c *gin.Context) {
+	i, exists := c.Get("userId")
+	if !exists {
+		log.Print("Found no userId in context. Cannot start timer")
+		c.Status(http.StatusInternalServerError)
 		return
 	}
-
-	w.Write([]byte(res.Username))
-
-}
-
-func HomeHandler(c *gin.Context) {
-	userCookie, cErr := c.Cookie("userAuthCookie")
-	if cErr != nil {
-		log.Print("User not authenticated. Does not have userAuthCookie")
-		log.Print(cErr.Error())
-		c.Header("Location", "/autentisering/login")
-		c.Status(http.StatusSeeOther)
-		return
-	}
-	idCookie, cErr := c.Cookie("userId")
-
-	if cErr != nil {
-		log.Print("User not authenticated. Does not have userId cookie")
-		log.Print(cErr.Error())
-		c.Header("Location", "/autentisering/login")
-		c.Status(http.StatusSeeOther)
-		return
-	}
-
-	i, err := strconv.Atoi(idCookie)
-	if err != nil {
-		log.Print("Could not get id from cookie")
-		log.Print(cErr.Error())
-		c.Header("Location", "/autentisering/login")
-		c.Status(http.StatusSeeOther)
-		return
-	}
-	isAuthenticated := timerDb.IsAuthorizedUser(userCookie, i)
-	if !isAuthenticated {
-		log.Print("Could not find user with id and auth code")
-		log.Print(cErr.Error())
-		c.Header("Location", "/autentisering/login")
-		c.Status(http.StatusSeeOther)
-		return
-	}
-
-	err = timerDb.StartTimer(i)
+	err := timerDb.StartTimer(i.(int))
 	if err != nil {
 		log.Print("Could not start timer")
 		log.Print(err.Error())
@@ -234,14 +213,10 @@ func HomeHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		log.Print("ERROR: Could not read index.html from file")
+		log.Print("ERROR: Could not read tid-startet.html from file")
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	c.HTML(http.StatusOK, "index.html", nil)
+	c.HTML(http.StatusOK, "tid-startet.html", nil)
 
-}
-
-func IsAuthorizedUser(s string, i int) {
-	panic("unimplemented")
 }
