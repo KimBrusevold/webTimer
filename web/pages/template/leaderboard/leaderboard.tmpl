@@ -1,0 +1,14 @@
+{{ template "header" }}
+<main>
+<h1 class="text-center">Resultater</h1>
+<div class="main-container">
+  {{ range .data }}
+  <div class="result">
+      <span>{{ .Place }}</span><span>{{ .Username }}</span><span>{{ .Minutes }}m</span><span>{{ .Seconds }}.{{ .Tenths }}s</span>
+    </div>
+  {{ end }}
+</div>
+
+<a href="/autentisering/login">dette er en link</a>
+</main>
+{{ template "footer" }}

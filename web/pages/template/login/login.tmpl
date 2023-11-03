@@ -1,0 +1,16 @@
+{{ template "header" }}
+<main>
+  <div class="main-container">
+    <div class="input-holder">
+      <form action="/autentisering/login" method="post">
+        <input type="email" name="email" id="email" placeholder="Din epost-adresse" required />
+        <input type="password" name="password" id="password" placeholder="Ditt passord" required />
+        <input type="submit" value="Logg inn" />
+      </form>
+    </div>
+    <div>
+      <a href="/registrer-bruker">Registrer deg for å delta</a>
+    </div>
+  </div>
+</main>
+{{ template "footer" }}

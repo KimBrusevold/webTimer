@@ -11,32 +11,15 @@ import (
 func HandleAuthentication(rg *gin.RouterGroup) {
 	rg.GET("/login", loginPage)
 	rg.POST("/login", loginUser)
-
-	rg.GET("/engangskode", onetimeCode)
-	rg.POST("/engangskode", authenticateEmailCode)
-
 }
 func onetimeCode(c *gin.Context) {
 	c.HTML(http.StatusOK, "email-sent.html", nil)
 }
 
-func authenticateEmailCode(c *gin.Context) {
-	authcode := c.PostForm("onetimecode")
-
-	user, err := timerDb.UserAuthProcess(authcode)
-	if err != nil {
-		c.String(http.StatusUnauthorized, "Error on authentication: %s", err.Error())
-		return
-	}
-	c.SetCookie("userAuthCookie", user.Authcode.String, 0, "/", hostUrl, true, true)
-	c.SetCookie("userId", fmt.Sprintf("%d", user.ID), 0, "/", hostUrl, true, true)
-
-	c.Header("Location", "/")
-	c.Status(http.StatusSeeOther)
-}
-
 func loginPage(c *gin.Context) {
-	c.HTML(http.StatusOK, "login.html", nil)
+	c.HTML(http.StatusOK, "login.tmpl", gin.H{
+		"title": "Logg inn",
+	})
 }
 
 func loginUser(c *gin.Context) {
@@ -48,7 +31,7 @@ func loginUser(c *gin.Context) {
 		return
 	}
 
-	usernameExists, id, err := timerDb.UserExistsWithEmail(email)
+	usernameExists, _, err := timerDb.UserExistsWithEmail(email)
 
 	if err != nil {
 		log.Printf("Kunne ikke logge inn bruker. DB feil: %s", err.Error())
@@ -61,21 +44,31 @@ func loginUser(c *gin.Context) {
 		c.Status(http.StatusSeeOther)
 		return
 	}
-
-	_, err = timerDb.SetNewOnetimeCode(email)
-
+	password := c.PostForm("password")
+	user, err := timerDb.UserAuthProcess(email, password)
 	if err != nil {
-		log.Print(err.Error())
-		c.Status(http.StatusInternalServerError)
+		c.String(http.StatusUnauthorized, "Error on authentication: %s", err.Error())
 		return
 	}
+	c.SetCookie("userAuthCookie", user.Authcode.String, 0, "/", hostUrl, true, true)
+	c.SetCookie("userId", fmt.Sprintf("%d", user.ID), 0, "/", hostUrl, true, true)
 
-	err = sendAuthMail(id, email)
-	if err != nil {
-		log.Print(err.Error())
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	c.Header("Location", "/autentisering/engangskode")
+	c.Header("Location", "/")
 	c.Status(http.StatusSeeOther)
+	// _, err = timerDb.SetNewOnetimeCode(email)
+
+	// if err != nil {
+	// 	log.Print(err.Error())
+	// 	c.Status(http.StatusInternalServerError)
+	// 	return
+	// }
+
+	// err = sendAuthMail(id, email)
+	// if err != nil {
+	// 	log.Print(err.Error())
+	// 	c.Status(http.StatusInternalServerError)
+	// 	return
+	// }
+	// c.Header("Location", "/autentisering/engangskode")
+	// c.Status(http.StatusSeeOther)
 }

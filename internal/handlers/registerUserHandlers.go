@@ -17,24 +17,36 @@ import (
 var timerDb *timer.TimerDB
 var hostUrl string
 
+type fieldResponse struct {
+	Error        bool
+	Errormessage string
+	Value        string
+}
+
 func HandleRegisterUser(rg *gin.RouterGroup, db *timer.TimerDB, host string) {
 	rg.GET("/", registerUserPage)
 	rg.POST("/", createUser)
 	rg.POST("/email", validateEmail)
 	rg.POST("/username", validateUsername)
+	rg.POST("/password", validatePassword)
 
 	timerDb = db
 	hostUrl = host
 }
 
 func registerUserPage(c *gin.Context) {
-	c.HTML(http.StatusOK, "register-user.html", nil)
+	c.HTML(http.StatusOK, "register-user.tmpl", gin.H{
+		"email": fieldResponse{
+			Error: false,
+		},
+	})
 }
 
 func createUser(c *gin.Context) {
 	user := timer.User{
 		Username: c.PostForm("username"),
 		Email:    c.PostForm("email"),
+		Password: c.PostForm("password"),
 	}
 	user.Username = strings.TrimSpace(user.Username)
 	user.Email = strings.TrimSpace(user.Email)
@@ -88,21 +100,14 @@ func createUser(c *gin.Context) {
 		return
 	}
 	//Create user
-	userid, err := timerDb.CreateUser(user)
+	_, err = timerDb.CreateUser(user)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Noe gikk galt under lagring av brukereren. Prøv på nytt senere")
 		log.Printf("Error on create: \n%s", err.Error())
 		return
 	}
 
-	err = sendAuthMail(userid, user.Email)
-	if err != nil {
-		log.Printf("Something went wrong sending email to user. \n%s", err.Error())
-		c.String(http.StatusInternalServerError, "Noe gikk galt under utsendelse av bekreftelses e-post. Forsøk å logge inn med din epost adresse på nytt", nil)
-		return
-	}
-
-	c.Header("Location", "/autentisering/engangskode")
+	c.Header("HX-Redirect", "/autentisering/login")
 	c.Status(http.StatusSeeOther)
 }
 
@@ -175,25 +180,52 @@ func validateEmail(c *gin.Context) {
 	emailParts := strings.Split(strings.TrimSpace(email), "@")
 
 	if len(emailParts) != 2 || emailParts[1] != "soprasteria.com" {
-		returnForm := `
-		<div hx-target="this" hx-swap="outerHTML">
-        	<label for="email">Din epost: </label>
-        	<input hx-post="/registrer-bruker/email" type="email" name="email" id="email" value="%s" required />
-			<div class='error-message'>Ugyldig epost. Kun Sopra Steria kan registrere seg på dette tidspunktet</div>
-      	</div>
-		`
-		c.String(http.StatusOK, returnForm, email)
+		c.HTML(http.StatusOK, "emailfield", fieldResponse{
+			Error:        true,
+			Errormessage: "Ugyldig epost. Kun Sopra Steria kan registrere seg på dette tidspunktet",
+			Value:        email,
+		})
 		log.Printf("Invalid email %s", email)
 		log.Printf("Length: %d", len(emailParts))
 		return
+		// return
+
 	}
-	returnForm := `
+	c.HTML(http.StatusOK, "emailfield", fieldResponse{
+		Error: false,
+		Value: email,
+	})
+}
+
+func validatePassword(c *gin.Context) {
+	p := c.PostForm("password")
+	if len(p) < 5 {
+		returnForm := `
 		<div hx-target="this" hx-swap="outerHTML">
-        	<label for="email">Din epost: </label>
-        	<input hx-post="/registrer-bruker/email" type="email" name="email" id="email" value="%s" required />
+        	<label for="passord">Ditt passord: </label>
+        	<input hx-post="/registrer-bruker/password" type="password" name="password" id="password" value="%s" required />
+			<div class='error-message'>Passorder er for kort</div>
       	</div>
 		`
-	c.String(http.StatusOK, returnForm, email)
+		c.String(http.StatusOK, returnForm, p)
+		return
+	} else if len([]byte(p)) > 72 {
+		returnForm := `
+		<div hx-target="this" hx-swap="outerHTML">
+        	<label for="passord">Ditt passord: </label>
+        	<input hx-post="/registrer-bruker/password" type="password" name="password" id="password" value="%s" required />
+			<div class='error-message'>Passordet er for kort.</div>
+      	</div>
+		`
+		c.String(http.StatusOK, returnForm, p)
+	}
+	returnForm := `
+	<div hx-target="this" hx-swap="outerHTML">
+		<label for="passord">Ditt passord: </label>
+		<input hx-post="/registrer-bruker/password" type="password" name="password" id="password" value="%s" required />
+	</div>
+		`
+	c.String(http.StatusOK, returnForm, p)
 }
 
 func validateUsername(c *gin.Context) {

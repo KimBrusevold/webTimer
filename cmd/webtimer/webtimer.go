@@ -55,7 +55,8 @@ func main() {
 	// dir := "./static/images"
 
 	r := gin.Default()
-	r.LoadHTMLGlob("./web/pages/**/*")
+	r.LoadHTMLGlob("./web/pages/template/**/*")
+
 	r.GET("/", leaderboard)
 
 	r.Static("/res/images", "./web/static/images")
@@ -171,7 +172,11 @@ func leaderboard(c *gin.Context) {
 		timesDisplay = append(timesDisplay, td)
 	}
 
-	c.HTML(http.StatusOK, "leaderboard.tmpl", timesDisplay)
+	c.HTML(http.StatusOK, "leaderboard.tmpl", gin.H{
+		"title": "Resultatliste",
+		"data":  timesDisplay,
+	})
+
 }
 
 func endTimerHandler(c *gin.Context) {
@@ -193,7 +198,11 @@ func endTimerHandler(c *gin.Context) {
 	minutes := timeUsed / (60 * 1000) % 60
 	seconds := timeUsed / (1000) % 60
 	tenths := timeUsed / (100) % 1000
-	c.String(http.StatusOK, "<h1>Du brukte %d min %d.%d sekunder<h2>", minutes, seconds, tenths)
+	c.HTML(http.StatusOK, "tid-avsluttet.tmpl", gin.H{
+		"minutes": minutes,
+		"seconds": seconds,
+		"tenths":  tenths,
+	})
 
 }
 
@@ -217,6 +226,6 @@ func startTimerHandler(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	c.HTML(http.StatusOK, "tid-startet.html", nil)
+	c.HTML(http.StatusOK, "tid-startet.tmpl", nil)
 
 }

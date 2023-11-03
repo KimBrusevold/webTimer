@@ -14,6 +14,7 @@ type User struct {
 	ID          int64
 	Username    string
 	Email       string
+	Password    string
 	OneTimeCode sql.NullString
 	Authcode    sql.NullString
 }

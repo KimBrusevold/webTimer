@@ -1,0 +1,9 @@
+{{ define "emailfield" }}
+<div hx-target="this" hx-swap="outerHTML">
+    <label for="email">Din Epost</label>
+    <input hx-post="/registrer-bruker/email" type="email" name="email" id="email" value="{{ .Value }}" required />
+    {{ if eq true .Error }}
+			<div class='error-message'>{{ .Errormessage }}</div>
+    {{ end }}
+</div>
+{{ end }}

@@ -1,7 +1,6 @@
 package timer
 
 import (
-	"crypto/md5"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -31,6 +31,7 @@ func (r *TimerDB) Migrate() error {
 		id INTEGER NOT NULL PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
         email TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
         onetimecode TEXT,
 		authcode TEXT
 		);
@@ -66,19 +67,21 @@ func (r *TimerDB) CreateUser(user User) (int64, error) {
 	uid := uuid.New()
 
 	command := `SELECT id FROM users WHERE username = ? AND email = ?`
-	md5Email := fmt.Sprintf("%x", md5.Sum([]byte(user.Email)))
 
-	row := r.db.QueryRow(command, user.Username, md5Email)
+	password, error := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
+	if error != nil {
+		return -1, error
+	}
+	row := r.db.QueryRow(command, user.Username, user.Email)
 	var id int64
 
 	err := row.Scan(&id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			command = `INSERT INTO users(username, email, onetimecode)
-			values(?, ?, ?)
+			command = `INSERT INTO users(username, email, password ,onetimecode)
+			values(?, ?, ?, ?)
 			RETURNING id;`
-
-			row = r.db.QueryRow(command, user.Username, md5Email, uid.String())
+			row = r.db.QueryRow(command, user.Username, user.Email, string(password[:]), uid.String())
 
 			err := row.Scan(&id)
 			if err != nil {
@@ -137,9 +140,8 @@ func (r *TimerDB) UserExistsWithUsername(username string) (bool, error) {
 
 func (r *TimerDB) UserExistsWithEmail(email string) (bool, int64, error) {
 	command := `SELECT id FROM users WHERE email = ?`
-	md5String := fmt.Sprintf("%x", md5.Sum([]byte(email)))
 
-	row := r.db.QueryRow(command, md5String)
+	row := r.db.QueryRow(command, email)
 
 	var id int64
 	err := row.Scan(&id)
@@ -155,7 +157,7 @@ func (r *TimerDB) UserExistsWithEmail(email string) (bool, int64, error) {
 
 func (r *TimerDB) SetNewOnetimeCode(email string) (string, error) {
 	command := `SELECT id FROM users WHERE email = ?;`
-	md5String := fmt.Sprintf("%x", md5.Sum([]byte(email)))
+	md5String := fmt.Sprintf("%x", email)
 	row := r.db.QueryRow(command, md5String)
 
 	var id int64
@@ -177,17 +179,22 @@ func (r *TimerDB) SetNewOnetimeCode(email string) (string, error) {
 	return uid, nil
 }
 
-func (r *TimerDB) UserAuthProcess(onetimeCode string) (*User, error) {
-	command := `SELECT id, username, email, onetimecode FROM users WHERE onetimecode = ?;`
+func (r *TimerDB) UserAuthProcess(email string, password string) (*User, error) {
 
-	row := r.db.QueryRow(command, onetimeCode)
+	command := `SELECT id, username, password FROM users WHERE email = ?;`
+
+	row := r.db.QueryRow(command, email)
 
 	user := User{}
 
-	err := row.Scan(&user.ID, &user.Username, &user.Email, &user.OneTimeCode)
+	err := row.Scan(&user.ID, &user.Username, &user.Password)
 	if err != nil {
 		return nil, err
 	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		return nil, err
+	}
+
 	command = `UPDATE users SET 
 		onetimecode = NULL,
 		authcode = ?
@@ -230,8 +237,27 @@ func (r *TimerDB) Create(timer Timer) (*Timer, error) {
 
 func (r *TimerDB) StartTimer(userId int) error {
 	startTime := time.Now().UnixMilli()
+
+	res := r.db.QueryRow(`SELECT count(id) FROM times WHERE userid = ? AND endtime IS NULL`, userId)
+	// if err != nil {
+	// 	log.Printf("Noe gikk galt under spørring på tider")
+	// 	log.Print(err.Error())
+	// 	return err
+	// }
+	var n int
+	err := res.Scan(&n)
+	if err != nil {
+		log.Printf("kunne ikke lese antall rader påvirket")
+		return err
+	}
+	if n > 0 {
+		log.Printf("Antall tider startet: %d", n)
+		log.Print("Tid er allerede påbegynt")
+		return nil
+	}
+
 	command := `INSERT INTO times(starttime, userid) values(?,?)`
-	_, err := r.db.Exec(command, startTime, userId)
+	_, err = r.db.Exec(command, startTime, userId)
 	if err != nil {
 		return err
 	}
