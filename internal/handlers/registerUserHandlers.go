@@ -119,7 +119,7 @@ func sendAuthMail(userId int64, email string) error {
 
 	postString := fmt.Sprintf(`{
 		"from":{
-			"email":"kim.nilsenbrusevold@outlook.com"
+			"email":"kim.brusevold@soprasteria.com"
 		 },
 		 "personalizations":[
 			{
