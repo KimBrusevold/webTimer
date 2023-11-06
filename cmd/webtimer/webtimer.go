@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/KimBrusevold/webTimer/internal/handlers"
 	"github.com/KimBrusevold/webTimer/internal/timer"
@@ -52,16 +53,24 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// dir := "./static/images"
-
 	r := gin.Default()
 	r.LoadHTMLGlob("./web/pages/template/**/*")
 
 	r.GET("/", leaderboard)
 
+	r.Use(func(c *gin.Context) {
+		// Apply the Cache-Control header to the script static file
+		if strings.HasPrefix(c.Request.URL.Path, "/res/scripts") {
+			c.Header("Cache-Control", "max-age=31536000, immutable")
+		}
+		// Continue to the next middleware or handler
+		c.Next()
+	})
+
 	r.Static("/res/images", "./web/static/images")
 	r.Static("/res/css", "./web/static/css")
 	r.Static("/res/scripts", "./web/static/scripts")
+
 	r.StaticFile("/favicon.ico", "./web/static/images/upstairs.png")
 
 	registrerBruker := r.Group("/registrer-bruker")
