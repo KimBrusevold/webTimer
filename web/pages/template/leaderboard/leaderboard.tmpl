@@ -1,12 +1,25 @@
 {{ template "header" }}
 <main>
-<h1 class="text-center">Resultater</h1>
-<div class="main-container">
-  {{ range .data }}
-  <div class="result">
-      <span>{{ .Place }}</span><span>{{ .Username }}</span><span>{{ .Minutes }}m</span><span>{{ .Seconds }}.{{ .Tenths }}s</span>
-    </div>
-  {{ end }}
+<h1 class="text-center text-primary text-5xl">Resultater</h1>
+<div class="flex flex-row justify-center">
+  <table class="table-auto w-1/2 bg-dark">
+    <thead>
+      <tr>
+        <th>Posisjon</th>
+        <th>Navn</th>
+        <th>Tid</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .data }}
+        <tr class="first:bg-gold first:text-mainbg nth-2n:bg-silver nth-2n:text-mainbg">
+          <td>{{ .Place }}</td>
+          <td>{{ .Username }}</td>
+          <td class="text-right"><span>{{ .Minutes }}m</span><span>{{ .Seconds }}.{{ .Tenths }}s</span></td>
+        </tr>
+      {{ end }}
+    </tbody>
+  </table>
 </div>
 </main>
 {{ template "footer" }}
