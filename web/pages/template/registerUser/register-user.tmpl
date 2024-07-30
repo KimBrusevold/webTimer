@@ -1,29 +1,16 @@
-<!DOCTYPE html>
-<html lang="nb">
+{{ template "header" }}
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="/res/scripts/htmx_1-9-6.min.js"></script>
-  <title>Værste Trappeløp - registrer bruker</title>
-</head>
-
-<body>
-  <div class="login-box">
-    <h2>Registrer bruker</h2>
-    <form hx-post="/registrer-bruker">
-      <div hx-target="this" hx-swap="outerHTML">
-        <label for="username">Ønsket Brukernavn</label>
-        <input hx-post="/registrer-bruker/username" type="text" name="username" id="username" required />
-      </div>
-      {{ template "emailfield" .email }}
-      <div hx-target="this" hx-swap="outerHTML">
-        <label for="passord">Ditt passord:</label>
-        <input hx-post="/registrer-bruker/password" type="password" name="password" id="password" required />
-      </div>
-      <button>Registrer</button>
-    </form>
-    <p>Du mottar en mail. I denne mailen er det en link. Følg linken og du skal bli innlogget</p>
+  <div class="login-container">
+    <div class="login-box">
+      <h2>Registrer bruker</h2>
+      <form action="/registrer-bruker" method="POST">
+          <label for="username">Ønsket Brukernavn</label>
+          <input type="text" name="username" id="username" required />
+        {{ template "emailfield" .email }}
+          <label for="passord">Ditt passord:</label>
+          <input type="password" name="password" id="password" required />
+        <input type="submit" value="Registrer"/>
+      </form>
+    </div>
   </div>
-</body>
-</html>
+  {{ template "footer" }}

@@ -67,3 +67,25 @@ h1 {
     padding-right: 0.5em;
   }
 }
+
+.login-container {
+  padding-top: 20px;
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+}
+
+.login-box {
+  background-color: aqua;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+input[type=text], input[type=password], input[type=email] {
+  width: 100%;
+  padding: 12px 20px;
+  margin: 8px 0;
+  display: inline-block;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
