@@ -102,7 +102,11 @@ func main() {
 		ReadTimeout:  15 * time.Second,
 	}
 	log.Printf("Now listening on %s", addr)
-	log.Fatal(srv.ListenAndServe())
+
+	err = srv.ListenAndServe()
+
+	log.Printf("Shutting down server %s", err.Error())
+	os.Exit(0)
 }
 
 type TimesDisplay struct {
