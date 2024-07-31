@@ -23,7 +23,6 @@ import (
 
 var timerDb *timer.TimerDB
 var host string
-var port string
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -73,15 +72,12 @@ func main() {
 
 	r.StaticFile("/favicon.ico", "./web/static/images/upstairs.png")
 
-	registrerBruker := r.Group("/registrer-bruker")
-	authGroup := r.Group("/autentisering")
+	handlers.HandleRegisterUser(r.Group("/registrer-bruker"), timerDb, host)
+	handlers.HandleAuthentication(r.Group("/autentisering"))
 
 	r.Use(authenticate)
 	r.GET("/timer/start-lop", startTimerHandler)
 	r.GET("/timer/avslutt-lop", endTimerHandler)
-
-	handlers.HandleRegisterUser(registrerBruker, timerDb, host)
-	handlers.HandleAuthentication(authGroup)
 
 	port, exists := os.LookupEnv("PORT")
 	if !exists {
@@ -141,7 +137,7 @@ func authenticate(c *gin.Context) {
 	i, err := strconv.Atoi(idCookie)
 	if err != nil {
 		log.Print("Could not get id from cookie")
-		log.Print(cErr.Error())
+		log.Print(err.Error())
 		c.Header("Location", "/autentisering/login")
 		c.Status(http.StatusSeeOther)
 		c.Abort()
@@ -151,7 +147,6 @@ func authenticate(c *gin.Context) {
 	isAuthenticated := timerDb.IsAuthorizedUser(userCookie, i)
 	if !isAuthenticated {
 		log.Print("Could not find user with id and auth code")
-		log.Print(cErr.Error())
 		c.Header("Location", "/autentisering/login")
 		c.Status(http.StatusSeeOther)
 		c.Abort()
