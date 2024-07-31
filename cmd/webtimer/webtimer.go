@@ -157,9 +157,6 @@ func leaderboard(c *gin.Context) {
 	var timesDisplay []TimesDisplay
 
 	for _, t := range times {
-		// minutes :=  / (60 * 1000) % 60
-		// seconds := timeUsed / (1000) % 60
-		// tenths := timeUsed / (100) % 1000
 		td := TimesDisplay{
 			Place:    t.Place,
 			Username: t.Username,
