@@ -1,12 +1,23 @@
 {{ template "header" }}
 <main class="results-page">
   <h1 id="result-title">Resultater</h1>
-  <div class="main-container">
-    {{ range .data }}
-    <div class="result">
-        <span>{{ .Place }}</span><span>{{ .Username }}</span><span>{{ .Minutes }}m</span><span>{{ .Seconds }}.{{ .Tenths }}s</span>
-      </div>
-    {{ end }}
-  </div>
+      <table class="main-container">
+        <thead>
+          <tr>
+            <th>Nr.</th>
+            <th>Brukernavn</th>
+            <th>Tid</th>
+          </tr>
+        </thead>
+        <tbody id="times-rows">
+          {{ range .data }}
+          <tr>
+              <td class="align-center">{{ .Place }}</td>
+              <td class="align-center username">{{ .Username }}</td>
+              <td id="tid" class="align-center">{{ .Minutes }}:{{ .Seconds }}.{{ .Tenths }}</td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
 </main>
 {{ template "footer" }}

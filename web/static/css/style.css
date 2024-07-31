@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css?family=Poppins:700|Poppins:400');
-
+@import url('https://fonts.googleapis.com/css?family=Inter:700|DM%20Mono:400');
 * {
   margin: 0px;
 }
@@ -20,36 +20,48 @@ body {
 
 .results-page {
   display: grid;
-  grid-template-columns: 1fr 2.5fr 1fr;
+  grid-template-columns: 1fr 4.5fr 1fr;
   grid-template-rows: auto auto;
 }
 
 .main-container {
   grid-column: 2;
-  border-radius: 10px;
   padding: 2em;
-  display: grid;
-  grid-template-columns: 1fr 3fr 1fr 1fr;
+  border-spacing:0;
+  table-layout: fixed;
+  width: 100%;
 }
 
-.result {
-  grid-column: span 4;
-  display: grid;
-  grid-template-columns: subgrid;
+#tid {
+  font-family: 'DM Mono';
 }
-.result span:nth-last-child(-n + 2) {
-  text-align: right;
+
+.align-center {
+  text-align: center;
 }
-.result:nth-child(1) {
+
+.username {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+th:first-child {
+  width: 50px;
+}
+#times-rows > tr:nth-child(1) {
   background-color: gold;
 }
 
-.result:nth-child(2) {
+#times-rows > tr:nth-child(2) {
   background-color: silver;
 }
 
-.result:nth-child(3) {
+#times-rows > tr:nth-child(3) {
   background-color: #cf8338;
+}
+
+tr > td:last-child {
+  padding-right: 10px;
 }
 
 @media only screen and (max-width: 600px) {
@@ -65,6 +77,10 @@ body {
     grid-column: 1;
     padding-left: 0.5em;
     padding-right: 0.5em;
+  }
+
+  #tid {
+    text-align: end;
   }
 }
 
