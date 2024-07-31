@@ -219,11 +219,5 @@ func startTimerHandler(c *gin.Context) {
 		return
 	}
 
-	if err != nil {
-		log.Print("ERROR: Could not read tid-startet.html from file")
-		c.Status(http.StatusInternalServerError)
-		return
-	}
 	c.HTML(http.StatusOK, "tid-startet.tmpl", nil)
-
 }
