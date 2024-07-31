@@ -6,6 +6,7 @@
 body {
   font-family: 'Poppins';
   font-weight: 400;
+  height: 100vh;
 }
 
 .text-center {
@@ -122,4 +123,13 @@ h1 {
 .register-link {
   margin-top: 10px;
   text-align: right;
+  justify-content: center;
+}
+
+.timer-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
 }

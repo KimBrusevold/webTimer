@@ -1,5 +1,9 @@
 {{ template "header" }}
-<h1>TID ER STOPPET</h1>
-<p>Du klarte det på {{ .minutes }}m {{ .seconds }}.{{ .tenths }}s</p>
-<a href="/">Se hvor du havnet på resultatlisten</a>
+<main class="timer-page">
+    <div class="timer-container">
+        <h2>TID ER STOPPET</h2>
+        <p>Du klarte det på {{ .minutes }}m {{ .seconds }}.{{ .tenths }}s</p>
+        <a href="/">Se hvor du havnet på resultatlisten</a>
+    </div>
+</main>
 {{ template "footer" }}
