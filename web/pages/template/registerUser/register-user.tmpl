@@ -1,16 +1,16 @@
 {{ template "header" }}
-
-  <div class="login-container">
+<main class="login-container">
+    <h2>Trappeløp</h2>
     <div class="login-box">
-      <h2>Registrer bruker</h2>
-      <form action="/registrer-bruker" method="POST">
-          <label for="username">Ønsket Brukernavn</label>
+      <form class="login-form" action="/registrer-bruker" method="POST">
+          <label for="username">Brukernavn</label>
           <input type="text" name="username" id="username" required />
-        {{ template "emailfield" .email }}
+          <label for="email">Din Epost</label>
+          <input type="email" name="email" id="email" placeholder="Må være en '@soprasteria.com' adresse" />      
           <label for="passord">Ditt passord:</label>
           <input type="password" name="password" id="password" required />
-        <input type="submit" value="Registrer"/>
+          <input type="submit" value="Registrer"/>
       </form>
     </div>
-  </div>
+</main>
   {{ template "footer" }}

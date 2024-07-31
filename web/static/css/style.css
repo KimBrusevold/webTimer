@@ -1,9 +1,11 @@
+@import url('https://fonts.googleapis.com/css?family=Poppins:700|Poppins:400');
+
 * {
   margin: 0px;
 }
 body {
-  font-family: sans-serif;
-  padding-top: 0.5rem;
+  font-family: 'Poppins';
+  font-weight: 400;
 }
 
 .text-center {
@@ -14,11 +16,12 @@ body {
   box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
 }
 
-main {
+/* Move this to some class that only applies to index */
+/* main {
   display: grid;
   grid-template-columns: 1fr 2.5fr 1fr;
   grid-template-rows: auto auto;
-}
+} */
 
 h1 {
   grid-column: 2;
@@ -69,23 +72,54 @@ h1 {
 }
 
 .login-container {
-  padding-top: 20px;
+  height: 100vh;
   display: flex;
   justify-content: center;
-  flex-direction: row;
+  align-items: center;
+  flex-direction: column;
+  padding: 0px 5px 0px 5px;
 }
 
 .login-box {
-  background-color: aqua;
+  display: flex;
+  flex-direction: column;
+
+  margin-top: 30px;
   padding: 20px;
-  border-radius: 10px;
+  border-radius: 6px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: darkgray;
+  max-width: 600px;
 }
 
-input[type=text], input[type=password], input[type=email] {
+.login-form > input[type=text], .login-form > input[type=password], .login-form > input[type=email] {
+  
   width: 100%;
   padding: 12px 20px;
   margin: 8px 0;
   display: inline-block;
   border: 1px solid #ccc;
+  border-radius: 5px;
   box-sizing: border-box;
+}
+
+
+.login-form > input[type=submit] {
+  width: 100%;
+  border-radius: 0px;
+  border-style: none;
+  background-color: black;
+  color: whitesmoke;
+  font-weight: 800;
+  letter-spacing: 0.4em;
+  padding: 10px 0 10px 0;
+}
+.login-form > input[type=submit]:hover {
+  cursor: pointer;
+}
+
+.register-link {
+  margin-top: 10px;
+  text-align: right;
 }
