@@ -9,23 +9,19 @@ body {
   height: 100vh;
 }
 
-.text-center {
+#result-title {
   text-align: center;
+  grid-column: 2;
 }
 
 .card-shadow {
   box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
 }
 
-/* Move this to some class that only applies to index */
-/* main {
+.results-page {
   display: grid;
   grid-template-columns: 1fr 2.5fr 1fr;
   grid-template-rows: auto auto;
-} */
-
-h1 {
-  grid-column: 2;
 }
 
 .main-container {
@@ -57,11 +53,11 @@ h1 {
 }
 
 @media only screen and (max-width: 600px) {
-  main {
+  .results-page {
       grid-template-columns: 1fr;
   }
   
-  h1 {
+  #result-title {
     grid-column: 1;
     
   }

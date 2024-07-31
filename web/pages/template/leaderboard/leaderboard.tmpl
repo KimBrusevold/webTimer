@@ -1,12 +1,12 @@
 {{ template "header" }}
-<main>
-<h1 class="text-center">Resultater</h1>
-<div class="main-container">
-  {{ range .data }}
-  <div class="result">
-      <span>{{ .Place }}</span><span>{{ .Username }}</span><span>{{ .Minutes }}m</span><span>{{ .Seconds }}.{{ .Tenths }}s</span>
-    </div>
-  {{ end }}
-</div>
+<main class="results-page">
+  <h1 id="result-title">Resultater</h1>
+  <div class="main-container">
+    {{ range .data }}
+    <div class="result">
+        <span>{{ .Place }}</span><span>{{ .Username }}</span><span>{{ .Minutes }}m</span><span>{{ .Seconds }}.{{ .Tenths }}s</span>
+      </div>
+    {{ end }}
+  </div>
 </main>
 {{ template "footer" }}
