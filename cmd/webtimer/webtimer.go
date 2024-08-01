@@ -3,53 +3,42 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"strconv"
-
-	"github.com/KimBrusevold/webTimer/internal/handlers"
-	"github.com/KimBrusevold/webTimer/internal/timer"
-	"github.com/joho/godotenv"
-
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/KimBrusevold/webTimer/internal/handlers"
+	"github.com/KimBrusevold/webTimer/internal/timer"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 
-	_ "github.com/libsql/libsql-client-go/libsql"
-	_ "modernc.org/sqlite"
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
 )
 
 var timerDb *timer.TimerDB
 var host string
 
-func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Print("No .env file found")
-	} else {
-		log.Print("Loaded variables from .env file")
-	}
-	hostUrl, exists := os.LookupEnv("HOSTURL")
-	if !exists {
-		log.Fatal("No rnv variable named 'HOSTURL' in .env file or environment variable. Exiting")
-	}
-	host = hostUrl
-	connStr, exists := os.LookupEnv("DATABASE_URL")
-	if !exists {
-		log.Fatal("No env variable named 'DATABASE_URL' in .env file or environment variable. Exiting")
-	}
-	log.Print("DATABASE_URL is provided")
-	conn, err := sql.Open("libsql", connStr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
+type settings struct {
+	HostUrl        string
+	DbUrl          string
+	TursoAuthToken string
+	Port           string
+}
 
-	log.Print("Migrating sqlLite")
-	timerDb = timer.NewDbTimerRepository(conn)
-	if err := timerDb.Migrate(); err != nil {
-		log.Fatal(err)
+func main() {
+	settings := getEnvSettings()
+
+	connStr := settings.DbUrl + fmt.Sprintf("?authToken=%s", settings.TursoAuthToken)
+
+	db, err := sql.Open("libsql", connStr)
+	if err != nil {
+		log.Fatalf("Could not create connector to database: %s", err)
 	}
+	defer db.Close()
+
+	timerDb = timer.NewDbTimerRepository(db)
 
 	r := gin.Default()
 	r.LoadHTMLGlob("./web/pages/template/**/*")
@@ -69,16 +58,12 @@ func main() {
 	r.GET("/timer/start-lop", startTimerHandler)
 	r.GET("/timer/avslutt-lop", endTimerHandler)
 
-	port, exists := os.LookupEnv("PORT")
-	if !exists {
-		log.Fatal("No env variable named 'PORT' in .env file or environment variable. Exiting")
-	}
 	// host, exists = os.LookupEnv("HOSTURL")
 	// if !exists {
 	// 	log.Fatal("No env variable named 'HOSTURL' in .env file or environment variable. Exiting")
 	// }
 
-	addr := fmt.Sprintf("0.0.0.0:%s", port)
+	addr := fmt.Sprintf("0.0.0.0:%s", settings.Port)
 
 	srv := &http.Server{
 		Handler: r,
@@ -101,6 +86,39 @@ type TimesDisplay struct {
 	Minutes  int64
 	Seconds  int64
 	Tenths   int64
+}
+
+func getEnvSettings() settings {
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
+	} else {
+		log.Print("Loaded variables from .env file")
+	}
+	hostUrl, exists := os.LookupEnv("HOSTURL")
+	if !exists {
+		log.Fatal("No rnv variable named 'HOSTURL' in .env file or environment variable. Exiting")
+	}
+	host = hostUrl
+	dbUrl, exists := os.LookupEnv("DATABASE_URL")
+	if !exists {
+		log.Fatal("No env variable named 'DATABASE_URL' in .env file or environment variable. Exiting")
+	}
+	authToken, exists := os.LookupEnv("TURSO_AUTH_TOKEN")
+	if !exists {
+		log.Fatal("No env variable named 'TURSO_AUTH_TOKEN' in .env file or environment variable. Exiting")
+	}
+
+	port, exists := os.LookupEnv("PORT")
+	if !exists {
+		log.Fatal("No env variable named 'PORT' in .env file or environment variable. Exiting")
+	}
+
+	return settings{
+		HostUrl:        hostUrl,
+		DbUrl:          dbUrl,
+		TursoAuthToken: authToken,
+		Port:           port,
+	}
 }
 
 func authenticate(c *gin.Context) {

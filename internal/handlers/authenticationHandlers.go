@@ -50,6 +50,7 @@ func loginUser(c *gin.Context) {
 		c.String(http.StatusUnauthorized, "Error on authentication: %s", err.Error())
 		return
 	}
+
 	c.SetCookie("userAuthCookie", user.Authcode.String, 0, "/", hostUrl, true, true)
 	c.SetCookie("userId", fmt.Sprintf("%d", user.ID), 0, "/", hostUrl, true, true)
 

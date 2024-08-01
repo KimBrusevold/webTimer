@@ -19,8 +19,8 @@ type fieldResponse struct {
 }
 
 func HandleRegisterUser(rg *gin.RouterGroup, db *timer.TimerDB, host string) {
-	rg.GET("/", registerUserPage)
-	rg.POST("/", createUser)
+	rg.GET("", registerUserPage)
+	rg.POST("", createUser)
 	// rg.POST("/email", validateEmail)
 	// rg.POST("/username", validateUsername)
 	// rg.POST("/password", validatePassword)
