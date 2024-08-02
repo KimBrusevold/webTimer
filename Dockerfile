@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine
+FROM golang:1.22-alpine
 WORKDIR /app
 
 COPY go.mod ./
@@ -8,10 +8,8 @@ COPY ./ ./
 
 RUN go build -o webtimer ./cmd/webtimer/webtimer.go
 
-ENV PORT=8080
-ENV HOSTURL=http://*:$PORT
-ENV DATABASE_URL=file:\web.db
 ENV GIN_MODE=release
+ENV PORT=8080
 
 EXPOSE 8080
 

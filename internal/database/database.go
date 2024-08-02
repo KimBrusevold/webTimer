@@ -1,4 +1,4 @@
-package timer
+package database
 
 import (
 	"database/sql"

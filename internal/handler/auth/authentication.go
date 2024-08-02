@@ -1,15 +1,14 @@
-package handlers
+package auth
 
 import (
 	"log"
 	"net/http"
 	"strings"
 
-	"github.com/KimBrusevold/webTimer/internal/timer"
+	"github.com/KimBrusevold/webTimer/internal/database"
 	"github.com/gin-gonic/gin"
 )
 
-var timerDb *timer.TimerDB
 var hostUrl string
 
 type fieldResponse struct {
@@ -18,18 +17,7 @@ type fieldResponse struct {
 	Value        string
 }
 
-func HandleRegisterUser(rg *gin.RouterGroup, db *timer.TimerDB, host string) {
-	rg.GET("", registerUserPage)
-	rg.POST("", createUser)
-	// rg.POST("/email", validateEmail)
-	// rg.POST("/username", validateUsername)
-	// rg.POST("/password", validatePassword)
-
-	timerDb = db
-	hostUrl = host
-}
-
-func registerUserPage(c *gin.Context) {
+func (ah AuthHandler) registerUserPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "register-user.tmpl", gin.H{
 		"email": fieldResponse{
 			Error: false,
@@ -37,8 +25,8 @@ func registerUserPage(c *gin.Context) {
 	})
 }
 
-func createUser(c *gin.Context) {
-	user := timer.User{
+func (ah AuthHandler) createUser(c *gin.Context) {
+	user := database.User{
 		Username: c.PostForm("username"),
 		Email:    c.PostForm("email"),
 		Password: c.PostForm("password"),
@@ -69,7 +57,7 @@ func createUser(c *gin.Context) {
 	log.Printf("Email: %s \n", user.Email)
 
 	//Is username used before?
-	usernameExists, err := timerDb.UserExistsWithUsername(user.Username)
+	usernameExists, err := ah.DB.UserExistsWithUsername(user.Username)
 	if usernameExists {
 		log.Printf("User with username: %s Already exists.", user.Username)
 		//TODO: Give better response here.
@@ -82,7 +70,7 @@ func createUser(c *gin.Context) {
 		return
 	}
 	//Is email used before?
-	emailExists, _, err := timerDb.UserExistsWithEmail(user.Email)
+	emailExists, _, err := ah.DB.UserExistsWithEmail(user.Email)
 	if emailExists {
 		log.Printf("Email: %s is already in use.", user.Email)
 		//TODO: Give better response here? Shouldn't inform that this email is in use. Makes scraping possible
@@ -95,14 +83,14 @@ func createUser(c *gin.Context) {
 		return
 	}
 	//Create user
-	_, err = timerDb.CreateUser(user)
+	_, err = ah.DB.CreateUser(user)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Noe gikk galt under lagring av brukereren. Prøv på nytt senere")
 		log.Printf("Error on create: \n%s", err.Error())
 		return
 	}
 
-	c.Header("Location", "/autentisering/login")
+	c.Header("Location", "/aut/innlogging")
 	c.Status(http.StatusSeeOther)
 }
 
@@ -169,86 +157,86 @@ func createUser(c *gin.Context) {
 // 	return nil
 // }
 
-func validateEmail(c *gin.Context) {
-	log.Printf("Validating email")
-	email := c.PostForm("email")
-	emailParts := strings.Split(strings.TrimSpace(email), "@")
+// func validateEmail(c *gin.Context) {
+// 	log.Printf("Validating email")
+// 	email := c.PostForm("email")
+// 	emailParts := strings.Split(strings.TrimSpace(email), "@")
 
-	if len(emailParts) != 2 || emailParts[1] != "soprasteria.com" {
-		c.HTML(http.StatusOK, "emailfield", fieldResponse{
-			Error:        true,
-			Errormessage: "Ugyldig epost. Kun Sopra Steria kan registrere seg på dette tidspunktet",
-			Value:        email,
-		})
-		log.Printf("Invalid email %s", email)
-		log.Printf("Length: %d", len(emailParts))
-		return
-		// return
+// 	if len(emailParts) != 2 || emailParts[1] != "soprasteria.com" {
+// 		c.HTML(http.StatusOK, "emailfield", fieldResponse{
+// 			Error:        true,
+// 			Errormessage: "Ugyldig epost. Kun Sopra Steria kan registrere seg på dette tidspunktet",
+// 			Value:        email,
+// 		})
+// 		log.Printf("Invalid email %s", email)
+// 		log.Printf("Length: %d", len(emailParts))
+// 		return
+// 		// return
 
-	}
-	c.HTML(http.StatusOK, "emailfield", fieldResponse{
-		Error: false,
-		Value: email,
-	})
-}
+// 	}
+// 	c.HTML(http.StatusOK, "emailfield", fieldResponse{
+// 		Error: false,
+// 		Value: email,
+// 	})
+// }
 
-func validatePassword(c *gin.Context) {
-	p := c.PostForm("password")
-	if len(p) < 5 {
-		returnForm := `
-		<div hx-target="this" hx-swap="outerHTML">
-        	<label for="passord">Ditt passord: </label>
-        	<input hx-post="/registrer-bruker/password" type="password" name="password" id="password" value="%s" required />
-			<div class='error-message'>Passorder er for kort</div>
-      	</div>
-		`
-		c.String(http.StatusOK, returnForm, p)
-		return
-	} else if len([]byte(p)) > 72 {
-		returnForm := `
-		<div hx-target="this" hx-swap="outerHTML">
-        	<label for="passord">Ditt passord: </label>
-        	<input hx-post="/registrer-bruker/password" type="password" name="password" id="password" value="%s" required />
-			<div class='error-message'>Passordet er for kort.</div>
-      	</div>
-		`
-		c.String(http.StatusOK, returnForm, p)
-	}
-	returnForm := `
-	<div hx-target="this" hx-swap="outerHTML">
-		<label for="passord">Ditt passord: </label>
-		<input hx-post="/registrer-bruker/password" type="password" name="password" id="password" value="%s" required />
-	</div>
-		`
-	c.String(http.StatusOK, returnForm, p)
-}
+// func validatePassword(c *gin.Context) {
+// 	p := c.PostForm("password")
+// 	if len(p) < 5 {
+// 		returnForm := `
+// 		<div hx-target="this" hx-swap="outerHTML">
+//         	<label for="passord">Ditt passord: </label>
+//         	<input hx-post="/registrer-bruker/password" type="password" name="password" id="password" value="%s" required />
+// 			<div class='error-message'>Passorder er for kort</div>
+//       	</div>
+// 		`
+// 		c.String(http.StatusOK, returnForm, p)
+// 		return
+// 	} else if len([]byte(p)) > 72 {
+// 		returnForm := `
+// 		<div hx-target="this" hx-swap="outerHTML">
+//         	<label for="passord">Ditt passord: </label>
+//         	<input hx-post="/registrer-bruker/password" type="password" name="password" id="password" value="%s" required />
+// 			<div class='error-message'>Passordet er for kort.</div>
+//       	</div>
+// 		`
+// 		c.String(http.StatusOK, returnForm, p)
+// 	}
+// 	returnForm := `
+// 	<div hx-target="this" hx-swap="outerHTML">
+// 		<label for="passord">Ditt passord: </label>
+// 		<input hx-post="/registrer-bruker/password" type="password" name="password" id="password" value="%s" required />
+// 	</div>
+// 		`
+// 	c.String(http.StatusOK, returnForm, p)
+// }
 
-func validateUsername(c *gin.Context) {
-	username := c.PostForm("username")
-	username = strings.TrimSpace(username)
-	usernameInUse, err := timerDb.UserExistsWithUsername(username)
-	if err != nil {
-		log.Printf("Error getting user with username %s. Error: %s", username, err.Error())
-		c.String(http.StatusInternalServerError, "")
-		return
-	}
+// func (ah AuthHandler) validateUsername(c *gin.Context) {
+// 	username := c.PostForm("username")
+// 	username = strings.TrimSpace(username)
+// 	usernameInUse, err := ah.DB.UserExistsWithUsername(username)
+// 	if err != nil {
+// 		log.Printf("Error getting user with username %s. Error: %s", username, err.Error())
+// 		c.String(http.StatusInternalServerError, "")
+// 		return
+// 	}
 
-	var returnform string
-	if usernameInUse {
-		returnform = `
-		<div hx-target="this" hx-swap="outerHTML">
-			<label for="username">Ønsket Brukernavn</label>
-			<input hx-post="/registrer-bruker/username" type="text" name="username" id="username" value="%s" required />
-			<div class='error-message'>Dette brukernavnet er ikke tilgjengelig</div>
-		</div>
-		`
-	} else {
-		returnform = `
-			<div hx-target="this" hx-swap="outerHTML">
-				<label for="username">Ønsket Brukernavn</label>
-				<input hx-post="/registrer-bruker/username" type="text" name="username" id="username" value="%s" required />
-			</div>
-			`
-	}
-	c.String(http.StatusOK, returnform, username)
-}
+// 	var returnform string
+// 	if usernameInUse {
+// 		returnform = `
+// 		<div hx-target="this" hx-swap="outerHTML">
+// 			<label for="username">Ønsket Brukernavn</label>
+// 			<input hx-post="/registrer-bruker/username" type="text" name="username" id="username" value="%s" required />
+// 			<div class='error-message'>Dette brukernavnet er ikke tilgjengelig</div>
+// 		</div>
+// 		`
+// 	} else {
+// 		returnform = `
+// 			<div hx-target="this" hx-swap="outerHTML">
+// 				<label for="username">Ønsket Brukernavn</label>
+// 				<input hx-post="/registrer-bruker/username" type="text" name="username" id="username" value="%s" required />
+// 			</div>
+// 			`
+// 	}
+// 	c.String(http.StatusOK, returnform, username)
+// }

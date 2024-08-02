@@ -1,4 +1,4 @@
-package handlers
+package auth
 
 import (
 	"fmt"
@@ -8,21 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func HandleAuthentication(rg *gin.RouterGroup) {
-	rg.GET("/login", loginPage)
-	rg.POST("/login", loginUser)
-}
-func onetimeCode(c *gin.Context) {
-	c.HTML(http.StatusOK, "email-sent.html", nil)
-}
-
-func loginPage(c *gin.Context) {
+func (ah AuthHandler) loginPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.tmpl", gin.H{
 		"title": "Logg inn",
 	})
 }
 
-func loginUser(c *gin.Context) {
+func (ah AuthHandler) loginUser(c *gin.Context) {
 	email := c.PostForm("email")
 
 	if email == "" {
@@ -31,7 +23,7 @@ func loginUser(c *gin.Context) {
 		return
 	}
 
-	usernameExists, _, err := timerDb.UserExistsWithEmail(email)
+	usernameExists, _, err := ah.DB.UserExistsWithEmail(email)
 
 	if err != nil {
 		log.Printf("Kunne ikke logge inn bruker. DB feil: %s", err.Error())
@@ -45,7 +37,7 @@ func loginUser(c *gin.Context) {
 		return
 	}
 	password := c.PostForm("password")
-	user, err := timerDb.UserAuthProcess(email, password)
+	user, err := ah.DB.UserAuthProcess(email, password)
 	if err != nil {
 		c.String(http.StatusUnauthorized, "Error on authentication: %s", err.Error())
 		return
@@ -73,3 +65,7 @@ func loginUser(c *gin.Context) {
 	// c.Header("Location", "/autentisering/engangskode")
 	// c.Status(http.StatusSeeOther)
 }
+
+// func onetimeCode(c *gin.Context) {
+// 	c.HTML(http.StatusOK, "email-sent.html", nil)
+// }
