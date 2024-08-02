@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/KimBrusevold/webTimer/internal/database"
+	"github.com/KimBrusevold/webTimer/internal/email"
 	"github.com/gin-gonic/gin"
 )
 
@@ -90,8 +91,25 @@ func (ah AuthHandler) createUser(c *gin.Context) {
 		return
 	}
 
+	err = sendAuthEmail(user.Email)
+	if err != nil {
+		log.Printf("Error sending email: %s", err)
+	}
 	c.Header("Location", "/aut/innlogging")
 	c.Status(http.StatusSeeOther)
+}
+
+func sendAuthEmail(emailAddr string) error {
+	ec := email.EmailClient{
+		HostAddr:   "smtp.gmail.com",
+		SenderAddr: "", // A gmail address
+		Password:   "", // A gmail app key
+	}
+
+	fromEmailAddress := ""
+	m := email.NewEmailMessage(fromEmailAddress).AddRecipients(emailAddr).SetSubject("Klar for trappeløp?").AddStringContent("Her er din unike kode: 123123123")
+	err := ec.SendEmail(m)
+	return err
 }
 
 // func sendAuthMail(userId int64, email string) error {

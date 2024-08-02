@@ -132,10 +132,11 @@ tr > td:last-child {
   cursor: pointer;
 }
 
-.register-link {
+.login-links {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
   margin-top: 10px;
-  text-align: right;
-  justify-content: center;
 }
 
 .timer-page {

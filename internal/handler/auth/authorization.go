@@ -39,7 +39,7 @@ func (ah AuthHandler) loginUser(c *gin.Context) {
 	password := c.PostForm("password")
 	user, err := ah.DB.UserAuthProcess(email, password)
 	if err != nil {
-		c.String(http.StatusUnauthorized, "Error on authentication: %s", err.Error())
+		c.String(http.StatusUnauthorized, "Error on authorization: %s", err.Error())
 		return
 	}
 

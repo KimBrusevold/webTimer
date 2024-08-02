@@ -25,44 +25,6 @@ func NewDbTimerRepository(db *sql.DB) *TimerDB {
 	}
 }
 
-func (r *TimerDB) Migrate() error {
-	query := `
-    CREATE TABLE IF NOT EXISTS users(
-		id INTEGER NOT NULL PRIMARY KEY,
-        username TEXT NOT NULL UNIQUE,
-        email TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL,
-        onetimecode TEXT,
-		authcode TEXT
-		);
-		`
-
-	log.Print("Creating users table if not exists")
-	_, err := r.db.Exec(query)
-
-	if err != nil {
-		return err
-	}
-
-	log.Print("Creating times table if not exists")
-	query = `
-	CREATE TABLE IF NOT EXISTS times(
-        id INTEGER NOT NULL PRIMARY KEY,
-		userid INTEGER REFERENCES users (id),
-        starttime INTEGER NOT NULL,
-        endtime INTEGER NULL,
-		computedtime INTEGER
-    );`
-
-	_, err = r.db.Exec(query)
-
-	if err != nil {
-		return err
-	}
-
-	return err
-}
-
 func (r *TimerDB) CreateUser(user User) (int64, error) {
 	uid := uuid.New()
 
