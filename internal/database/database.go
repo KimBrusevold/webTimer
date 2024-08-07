@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -86,19 +85,7 @@ func (r *TimerDB) CreateUser(user User) (User, error) {
 		}
 		return User{}, err
 	}
-
-	command = `UPDATE users SET 
-		onetimecode = ?,
-		authcode = NULL
-		WHERE id = ?;`
-
-	_, err = r.db.Exec(command, uid.String(), user.ID)
-
-	if err != nil {
-		return User{}, err
-	}
-
-	return user, nil
+	return User{}, errors.New("user already exists")
 }
 
 func (r *TimerDB) GetUser(userid int64) (*User, error) {
@@ -149,10 +136,9 @@ func (r *TimerDB) UserExistsWithEmail(email string) (bool, int64, error) {
 	return true, id, nil
 }
 
-func (r *TimerDB) SetNewOnetimeCode(email string) (string, error) {
-	command := `SELECT id FROM users WHERE email = ?;`
-	md5String := fmt.Sprintf("%x", email)
-	row := r.db.QueryRow(command, md5String)
+func (r *TimerDB) SetNewOnetimeCode(username string, email string) (string, error) {
+	command := `SELECT id FROM users WHERE email = ? and username = ?;`
+	row := r.db.QueryRow(command, email, username)
 
 	var id int64
 	if err := row.Scan(&id); err != nil {
@@ -161,7 +147,8 @@ func (r *TimerDB) SetNewOnetimeCode(email string) (string, error) {
 
 	command = `UPDATE users SET 
 		onetimecode = ?,
-		authcode = NULL
+		authcode = NULL,
+		state = 2
 		WHERE id = ?;`
 
 	uid := uuid.New().String()

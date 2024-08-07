@@ -21,4 +21,6 @@ func (a AuthHandler) SetupRoutes(rg *gin.RouterGroup) {
 	rg.POST("/engangskode", a.oneTimeCode)
 
 	rg.GET("/nytt-passord", a.newPassword)
+	rg.POST("/nytt-passord", a.newPassword)
+	rg.POST("/nytt-passord/email", a.sendNewPasswordEmail)
 }

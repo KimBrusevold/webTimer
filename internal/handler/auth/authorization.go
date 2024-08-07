@@ -53,3 +53,34 @@ func (ah AuthHandler) loginUser(c *gin.Context) {
 func (ah AuthHandler) newPassword(c *gin.Context) {
 	c.HTML(http.StatusOK, "forgot-password.tmpl", nil)
 }
+
+func (ah AuthHandler) setnewPassword(c *gin.Context) {
+
+}
+
+func (ah AuthHandler) sendNewPasswordEmail(c *gin.Context) {
+	username := c.PostForm("username")
+	email := c.PostForm("email")
+
+	c.HTML(http.StatusOK, "forgot-password-response.tmpl", gin.H{
+		"username": username,
+		"email":    email,
+	})
+
+	if username == "" || email == "" {
+		return
+	}
+
+	code, err := ah.DB.SetNewOnetimeCode(username, email)
+
+	if err != nil {
+		log.Printf("Something went wrong setting new one time code. %s", err)
+		return
+	}
+
+	err = ah.EmailClient.SendPasswordCode(code, email)
+	if err != nil {
+		log.Printf("Something went wrong sending one time code. %s", err)
+		return
+	}
+}

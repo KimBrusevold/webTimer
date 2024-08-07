@@ -146,3 +146,7 @@ tr > td:last-child {
   text-align: center;
   height: 100%;
 }
+
+.reset-password-description {
+  padding-bottom: 15px;
+}
