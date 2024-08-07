@@ -1,7 +1,9 @@
 package email
 
 import (
+	"encoding/base64"
 	"fmt"
+	"log"
 	"net/smtp"
 )
 
@@ -40,8 +42,12 @@ func (e *EmailMessage) BuildBody() []byte {
 	}
 
 	to = to + "\r\n"
-	subject := "Subject: " + e.subject + "\r\n"
-	contentType := "Content-Type: " + e.contentType + " charset=UTF-8;" + "\r\n"
+	subjectBytes := []byte(e.subject)
+	dst := make([]byte, base64.StdEncoding.EncodedLen(len(subjectBytes)))
+	base64.StdEncoding.Encode(dst, subjectBytes)
+	log.Print(string(dst))
+	subject := "Subject: =?utf-8?B?" + string(dst) + "?=" + "\r\n"
+	contentType := "Content-Type: " + e.contentType + " charset=utf-8" + "\r\n"
 	return []byte(from + to + subject + contentType + "\r\n" + e.body)
 }
 

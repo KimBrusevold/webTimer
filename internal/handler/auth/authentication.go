@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/KimBrusevold/webTimer/internal/database"
-	"github.com/KimBrusevold/webTimer/internal/email"
 	"github.com/gin-gonic/gin"
 )
 
@@ -91,89 +90,13 @@ func (ah AuthHandler) createUser(c *gin.Context) {
 		return
 	}
 
-	err = sendAuthEmail(user.Email)
+	err = ah.EmailClient.SendAuthEmail(user.Email)
 	if err != nil {
 		log.Printf("Error sending email: %s", err)
 	}
 	c.Header("Location", "/aut/innlogging")
 	c.Status(http.StatusSeeOther)
 }
-
-func sendAuthEmail(emailAddr string) error {
-	ec := email.EmailClient{
-		HostAddr:   "smtp.gmail.com",
-		SenderAddr: "", // A gmail address
-		Password:   "", // A gmail app key
-	}
-
-	fromEmailAddress := ""
-	m := email.NewEmailMessage(fromEmailAddress).AddRecipients(emailAddr).SetSubject("Klar for trappeløp?").AddStringContent("Her er din unike kode: 123123123")
-	err := ec.SendEmail(m)
-	return err
-}
-
-// func sendAuthMail(userId int64, email string) error {
-// 	res, err := timerDb.GetUser(userId)
-// 	if err != nil {
-// 		log.Print("Could not retrieve")
-// 		log.Print(err.Error())
-// 		return err
-// 	}
-
-// 	templateId := "d-67cb50f335c44f85a8960612dc97e7bc"
-// 	httpposturl := "https://api.sendgrid.com/v3/mail/send"
-
-// 	postString := fmt.Sprintf(`{
-// 		"from":{
-// 			"email":"kim.brusevold@soprasteria.com"
-// 		 },
-// 		 "personalizations":[
-// 			{
-// 			   "to":[
-// 				  {
-// 					 "email":"%s"
-// 				  }
-// 			   ],
-// 			   "dynamic_template_data":{
-// 				  "url": "%s"
-// 				}
-// 			}
-// 		 ],
-// 		 "template_id":"%s"
-// 	}`, email, res.OneTimeCode.String, templateId)
-
-// 	postdata := []byte(postString)
-// 	request, err := http.NewRequest("POST", httpposturl, bytes.NewBuffer(postdata))
-// 	if err != nil {
-// 		log.Printf("Klarte ikke å forberede request for å sende template. %s", err.Error())
-// 		return err
-// 	}
-// 	request.Header.Set("Content-Type", "application/json;")
-// 	sendgridApiKey, exists := os.LookupEnv("SENDGRID_API_KEY")
-// 	if !exists {
-// 		log.Print("No env variable named 'SENDGRID_API_KEY' in .env file or environment variable. Exiting")
-// 		return errors.New("no env variable named 'SENDGRID_API_KEY' found. Cannot send email")
-// 	}
-// 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", sendgridApiKey))
-
-// 	log.Printf("Forsøker å sende epost til bruker med epost %s", email)
-// 	client := &http.Client{}
-// 	response, err := client.Do(request)
-// 	if err != nil {
-// 		log.Printf("Error when sending email request to SendGrid. \n %s", err.Error())
-// 		return err
-// 	}
-// 	defer response.Body.Close()
-
-// 	log.Printf("Sendgripd response Status: %s", response.Status)
-// 	responseCont, err := io.ReadAll(response.Body)
-// 	if err != nil {
-// 		log.Print("Cannot read response body")
-// 	} else {
-// 		log.Print(string(responseCont))
-// 	}
-// 	return nil
-// }
 
 // func validateEmail(c *gin.Context) {
 // 	log.Printf("Validating email")

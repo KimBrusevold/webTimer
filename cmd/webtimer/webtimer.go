@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/KimBrusevold/webTimer/internal/database"
+	"github.com/KimBrusevold/webTimer/internal/email"
 	"github.com/KimBrusevold/webTimer/internal/handler"
 	"github.com/KimBrusevold/webTimer/internal/handler/auth"
 	"github.com/gin-gonic/gin"
@@ -21,10 +22,12 @@ import (
 var timerDb *database.TimerDB
 
 type settings struct {
-	HostUrl        string
-	DbUrl          string
-	TursoAuthToken string
-	Port           string
+	hostUrl            string
+	dbUrl              string
+	tursoAuthToken     string
+	port               string
+	senderEmailAddress string
+	emailPassword      string
 }
 
 func main() {
@@ -56,6 +59,11 @@ func main() {
 
 	authHandler := auth.AuthHandler{
 		DB: timerDb,
+		EmailClient: &email.EmailClient{
+			HostAddr:   "smtp.gmail.com",
+			SenderAddr: settings.senderEmailAddress, // A gmail address
+			Password:   settings.emailPassword,      // A gmail app key
+		},
 	}
 	authHandler.SetupRoutes(r.Group("/aut"))
 
@@ -64,7 +72,7 @@ func main() {
 	}
 	timerH.SetupRoutes(r.Group("/timer"))
 
-	addr := fmt.Sprintf("0.0.0.0:%s", settings.Port)
+	addr := fmt.Sprintf("0.0.0.0:%s", settings.port)
 
 	srv := &http.Server{
 		Handler: r,
@@ -102,6 +110,16 @@ func getEnvSettings() settings {
 		log.Fatal("No env variable named 'TURSO_AUTH_TOKEN' in .env file or environment variable. Exiting")
 	}
 
+	senderEmail, exists := os.LookupEnv("EMAIL_SENDER_ADDRESS")
+	if !exists || senderEmail == "" {
+		log.Fatal("No env variable or emtpy value named 'EMAIL_SENDER_ADDRESS' in .env file or environment variable. Exiting")
+	}
+
+	emailPassword, exists := os.LookupEnv("EMAIL_PASSWORD")
+	if !exists || emailPassword == "" {
+		log.Fatal("No env variable or emtpy value named 'EMAIL_PASSWORD' in .env file or environment variable. Exiting")
+	}
+
 	port, exists := os.LookupEnv("PORT")
 	if !exists {
 		log.Println("No port set. Using default: 8080")
@@ -109,19 +127,21 @@ func getEnvSettings() settings {
 	}
 
 	return settings{
-		HostUrl:        hostUrl,
-		DbUrl:          dbUrl,
-		TursoAuthToken: authToken,
-		Port:           port,
+		hostUrl:            hostUrl,
+		dbUrl:              dbUrl,
+		tursoAuthToken:     authToken,
+		port:               port,
+		senderEmailAddress: senderEmail,
+		emailPassword:      emailPassword,
 	}
 }
 
 func buildConnectionString(s settings) string {
 	var connString string
-	if s.TursoAuthToken == "" {
-		connString = s.DbUrl
+	if s.tursoAuthToken == "" {
+		connString = s.dbUrl
 	} else {
-		connString = s.DbUrl + fmt.Sprintf("?authToken=%s", s.TursoAuthToken)
+		connString = s.dbUrl + fmt.Sprintf("?authToken=%s", s.tursoAuthToken)
 	}
 	return connString
 }
