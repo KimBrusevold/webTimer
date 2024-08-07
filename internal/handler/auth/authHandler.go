@@ -19,4 +19,6 @@ func (a AuthHandler) SetupRoutes(rg *gin.RouterGroup) {
 	rg.POST("/registrer-bruker", a.createUser)
 
 	rg.POST("/engangskode", a.oneTimeCode)
+
+	rg.GET("/nytt-passord", a.newPassword)
 }

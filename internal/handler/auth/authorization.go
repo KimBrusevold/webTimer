@@ -48,24 +48,8 @@ func (ah AuthHandler) loginUser(c *gin.Context) {
 
 	c.Header("Location", "/")
 	c.Status(http.StatusSeeOther)
-	// _, err = timerDb.SetNewOnetimeCode(email)
-
-	// if err != nil {
-	// 	log.Print(err.Error())
-	// 	c.Status(http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// err = sendAuthMail(id, email)
-	// if err != nil {
-	// 	log.Print(err.Error())
-	// 	c.Status(http.StatusInternalServerError)
-	// 	return
-	// }
-	// c.Header("Location", "/autentisering/engangskode")
-	// c.Status(http.StatusSeeOther)
 }
 
-// func onetimeCode(c *gin.Context) {
-// 	c.HTML(http.StatusOK, "email-sent.html", nil)
-// }
+func (ah AuthHandler) newPassword(c *gin.Context) {
+	c.HTML(http.StatusOK, "forgot-password.tmpl", nil)
+}
