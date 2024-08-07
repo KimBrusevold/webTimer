@@ -1,0 +1,17 @@
+<form class="login-form" action="/aut/engangskode" method="POST">
+  <label for="username">Brukernavn</label>
+  <input type="text" name="username" id="username" value={{ .username }} readonly />
+
+  <label for="email">Din Epost</label>
+  <input type="email" name="email" id="email" value={{ .email }} readonly/>      
+
+  <label for="passord">Ditt passord</label>
+  <input type="password" name="password" id="password" value={{ .password }} readonly/>
+
+  <label for="oneTimeCode">Engangskode</label>
+  <input type="text" name="oneTimeCode" id="oneTimeCode" required />
+
+  <p>Du mottar en engangskode til din epost. Bruk denne for å fullføre registreringen</p>
+  <input type="submit" value="Registrer"/>
+</form>
+

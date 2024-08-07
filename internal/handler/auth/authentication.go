@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -25,7 +26,29 @@ func (ah AuthHandler) registerUserPage(c *gin.Context) {
 	})
 }
 
+func (ah AuthHandler) oneTimeCode(c *gin.Context) {
+	user, err := validateRegisterForm(c)
+	if err != nil {
+		return
+	}
+
+	user.OneTimeCode.String = c.PostForm("oneTimeCode")
+	if user.OneTimeCode.String == "" {
+		c.String(http.StatusUnprocessableEntity, "Ugyldig engangskode", nil)
+		return
+	}
+	user.OneTimeCode.Valid = true
+
+	err = ah.DB.ConfirmOneTimeCode(user)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Noe gitt galt")
+	}
+	c.Header("Location", "/aut/innlogging")
+	c.Status(http.StatusSeeOther)
+}
+
 func (ah AuthHandler) createUser(c *gin.Context) {
+
 	user := database.User{
 		Username: c.PostForm("username"),
 		Email:    c.PostForm("email"),
@@ -53,9 +76,6 @@ func (ah AuthHandler) createUser(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Username: %s \n", user.Username)
-	log.Printf("Email: %s \n", user.Email)
-
 	//Is username used before?
 	usernameExists, err := ah.DB.UserExistsWithUsername(user.Username)
 	if usernameExists {
@@ -82,20 +102,55 @@ func (ah AuthHandler) createUser(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
+
 	//Create user
-	_, err = ah.DB.CreateUser(user)
+	user, err = ah.DB.CreateUser(user)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Noe gikk galt under lagring av brukereren. Prøv på nytt senere")
 		log.Printf("Error on create: \n%s", err.Error())
 		return
 	}
 
-	err = ah.EmailClient.SendAuthEmail(user.Email)
+	err = ah.EmailClient.SendAuthEmail(user.Email, user.OneTimeCode.String)
 	if err != nil {
 		log.Printf("Error sending email: %s", err)
 	}
-	c.Header("Location", "/aut/innlogging")
-	c.Status(http.StatusSeeOther)
+	c.HTML(http.StatusOK, "one-time-code.tmpl", gin.H{
+		"username": user.Username,
+		"email":    user.Email,
+		"password": c.PostForm("password"), // the retrieced user password only has the hased password.
+	})
+}
+
+func validateRegisterForm(c *gin.Context) (database.User, error) {
+	user := database.User{
+		Username: c.PostForm("username"),
+		Email:    c.PostForm("email"),
+		Password: c.PostForm("password"),
+	}
+	user.Username = strings.TrimSpace(user.Username)
+	user.Email = strings.TrimSpace(user.Email)
+
+	log.Printf("verifiserer og skaper bruker med brukernavn: %s, og epost: %s", user.Username, user.Email)
+	//TODO: Denne bør sette error i form = Epost og brukernavn er påkrevde felter.
+	if user.Email == "" || user.Username == "" {
+		log.Print("Could not bind form data to user")
+		c.String(http.StatusBadRequest, "Ugyldig epost eller navn")
+		return user, errors.New("ugyldig epost eller navn")
+	}
+	v := strings.Split(user.Email, "@")
+
+	if len(v) != 2 {
+		log.Printf("Invalid email: %s", user.Email)
+		c.String(http.StatusBadRequest, "Ugyldig epost")
+		return user, errors.New("ugyldig epost")
+	} else if v[1] != "soprasteria.com" {
+		log.Printf("User with email-domain: %s tried to sign up.", v[1])
+		c.String(http.StatusBadRequest, "Beklager, du kan ikke registrere deg (enda)")
+		return user, errors.New("beklager, du kan ikke registrere deg (enda)")
+	}
+
+	return user, nil
 }
 
 // func validateEmail(c *gin.Context) {

@@ -25,34 +25,66 @@ func NewDbTimerRepository(db *sql.DB) *TimerDB {
 	}
 }
 
-func (r *TimerDB) CreateUser(user User) (int64, error) {
+func (r *TimerDB) ConfirmOneTimeCode(user User) error {
+	if !user.OneTimeCode.Valid {
+		log.Panic("User has no OneTimeCode set")
+	}
+
+	command := `SELECT id, password FROM users WHERE username = ? AND email = ? AND onetimecode= ?`
+	row := r.db.QueryRow(command, user.Username, user.Email, user.OneTimeCode.String)
+
+	var hashedPassword string
+	err := row.Scan(&user.ID, &hashedPassword)
+	if err != nil {
+		log.Printf("Error when getting row values. %s", err)
+		return err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(user.Password)); err != nil {
+		log.Printf("Passwords are not the same. %s", err)
+		return err
+	}
+
+	command = "UPDATE users SET onetimecode = null, state = 1 WHERE id = ?;"
+	_, err = r.db.Exec(command, user.ID)
+	if err != nil {
+		log.Printf("Could not update userstate. %s", err)
+		return err
+	}
+	return nil
+}
+
+func (r *TimerDB) CreateUser(user User) (User, error) {
 	uid := uuid.New()
 
 	command := `SELECT id FROM users WHERE username = ? AND email = ?`
 
 	password, error := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
 	if error != nil {
-		return -1, error
+		return User{}, error
 	}
 	row := r.db.QueryRow(command, user.Username, user.Email)
-	var id int64
 
-	err := row.Scan(&id)
+	err := row.Scan(&user.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			command = `INSERT INTO users(username, email, password ,onetimecode)
-			values(?, ?, ?, ?)
+			command = `INSERT INTO users(username, email, password ,onetimecode, state)
+			values(?, ?, ?, ?, ?)
 			RETURNING id;`
-			row = r.db.QueryRow(command, user.Username, user.Email, string(password[:]), uid.String())
+			user.OneTimeCode = sql.NullString{
+				String: uid.String(),
+			}
+			user.Password = string(password[:])
+			row = r.db.QueryRow(command, user.Username, user.Email, user.Password, user.OneTimeCode.String, Created)
 
-			err := row.Scan(&id)
+			err := row.Scan(&user.ID)
 			if err != nil {
-				return -1, err
+				return User{}, err
 			}
 
-			return id, nil
+			return user, nil
 		}
-		return -1, err
+		return User{}, err
 	}
 
 	command = `UPDATE users SET 
@@ -60,13 +92,13 @@ func (r *TimerDB) CreateUser(user User) (int64, error) {
 		authcode = NULL
 		WHERE id = ?;`
 
-	_, err = r.db.Exec(command, uid.String(), id)
+	_, err = r.db.Exec(command, uid.String(), user.ID)
 
 	if err != nil {
-		return -1, err
+		return User{}, err
 	}
 
-	return id, nil
+	return user, nil
 }
 
 func (r *TimerDB) GetUser(userid int64) (*User, error) {
@@ -143,7 +175,7 @@ func (r *TimerDB) SetNewOnetimeCode(email string) (string, error) {
 
 func (r *TimerDB) UserAuthProcess(email string, password string) (*User, error) {
 
-	command := `SELECT id, username, password FROM users WHERE email = ?;`
+	command := `SELECT id, username, password FROM users WHERE email = ? AND status = 1;`
 
 	row := r.db.QueryRow(command, email)
 
