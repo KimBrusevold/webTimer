@@ -88,6 +88,17 @@ func (r *TimerDB) CreateUser(user User) (User, error) {
 	return User{}, errors.New("user already exists")
 }
 
+func (r *TimerDB) UpdatePassword(user User) error {
+	query := "UPDATE users SET password = ?, onetimecode = null, state = 1 WHERE email = ? AND username = ? AND onetimecode = ?"
+	password, err := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec(query, password, user.Email, user.Username, user.OneTimeCode.String)
+
+	return err
+}
+
 func (r *TimerDB) GetUser(userid int64) (*User, error) {
 	command := `SELECT id, username, email, onetimecode FROM users WHERE id = ?;`
 
@@ -153,7 +164,8 @@ func (r *TimerDB) SetNewOnetimeCode(username string, email string) (string, erro
 
 	uid := uuid.New().String()
 	_, err := r.db.Exec(command, uid, id)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		log.Print(errors.Is(err, sql.ErrNoRows))
 		return "", err
 	}
 
@@ -162,7 +174,7 @@ func (r *TimerDB) SetNewOnetimeCode(username string, email string) (string, erro
 
 func (r *TimerDB) UserAuthProcess(email string, password string) (*User, error) {
 
-	command := `SELECT id, username, password FROM users WHERE email = ? AND status = 1;`
+	command := `SELECT id, username, password FROM users WHERE email = ? AND state = 1;`
 
 	row := r.db.QueryRow(command, email)
 

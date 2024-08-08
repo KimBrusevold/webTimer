@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -55,7 +56,26 @@ func (ah AuthHandler) newPassword(c *gin.Context) {
 }
 
 func (ah AuthHandler) setnewPassword(c *gin.Context) {
+	user, err := validateRegisterForm(c)
+	if err != nil {
+		log.Print(err)
+		return //TODO responder med en tilbakemelding
+	}
 
+	user.OneTimeCode.String = strings.TrimSpace(c.PostForm("oneTimeCode"))
+	if user.OneTimeCode.String == "" {
+		log.Print("Authcode cannot be empty")
+		return //TODO return error message
+	}
+
+	err = ah.DB.UpdatePassword(user)
+	if err != nil {
+		log.Print("Error updating password")
+		return //TODO return error message
+	}
+
+	c.Header("Location", "/aut/innlogging")
+	c.Status(http.StatusSeeOther)
 }
 
 func (ah AuthHandler) sendNewPasswordEmail(c *gin.Context) {
@@ -70,6 +90,8 @@ func (ah AuthHandler) sendNewPasswordEmail(c *gin.Context) {
 	if username == "" || email == "" {
 		return
 	}
+	username = strings.TrimSpace(username)
+	email = strings.TrimSpace(email)
 
 	code, err := ah.DB.SetNewOnetimeCode(username, email)
 
