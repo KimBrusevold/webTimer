@@ -20,6 +20,12 @@ func (lh LeaderboardHandler) HandleLeaderboardShow(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "%s", err.Error())
 		return
 	}
+	number, err := lh.DB.RetrieveTimesCount()
+	if err != nil {
+		log.Printf("Could not get times count from db. %s", err.Error())
+		c.String(http.StatusInternalServerError, "%s", err.Error())
+		return
+	}
 
 	var timesDisplay []model.TimesDisplay
 
@@ -35,7 +41,8 @@ func (lh LeaderboardHandler) HandleLeaderboardShow(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "leaderboard.tmpl", gin.H{
-		"title": "Resultatliste",
-		"data":  timesDisplay,
+		"title":      "Resultatliste",
+		"timingData": timesDisplay,
+		"countData":  number,
 	})
 }
