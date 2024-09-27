@@ -9,6 +9,6 @@ PORT=8080
 HOSTURL="localhost:8080"
 DATABASE_URL="file:web.db"
 TURSO_AUTH_TOKEN=""
-EMAIL_SENDER_ADDRESS="verstetrapp@gmail.com"
+EMAIL_SENDER_ADDRESS="somegmail@gmail.com"
 EMAIL_PASSWORD="test test test test "
 ```
