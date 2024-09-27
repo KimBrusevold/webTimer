@@ -11,4 +11,4 @@ DATABASE_URL="file:web.db"
 TURSO_AUTH_TOKEN=""
 EMAIL_SENDER_ADDRESS="verstetrapp@gmail.com"
 EMAIL_PASSWORD="test test test test "
-```env
+```
