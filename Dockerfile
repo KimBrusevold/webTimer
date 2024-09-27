@@ -6,6 +6,7 @@ RUN go mod download
 
 COPY ./ ./
 
+RUN rm ./.env
 RUN go build -o webtimer ./cmd/webtimer/webtimer.go
 
 ENV GIN_MODE=release
