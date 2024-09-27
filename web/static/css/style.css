@@ -25,7 +25,6 @@ body {
   flex-direction: row;
   justify-content: space-between;
   background-color: #f4f4f5;
-  height: 35px;
   width: 100%;
   box-sizing: border-box;
   border-radius: 6px;
@@ -59,10 +58,11 @@ body {
 
 .leaderboard-table {
   width: 100%;
+  border-collapse: collapse;
 }
 
 .leaderboard-table tbody tr {
-  border-top: 1px solid red !important;
+  border-top: 1px solid #ddd;
 }
 
 .text-left {
@@ -80,10 +80,6 @@ body {
 
 #tid {
   font-family: 'DM Mono';
-}
-
-.align-center {
-  text-align: center;
 }
 
 .username {

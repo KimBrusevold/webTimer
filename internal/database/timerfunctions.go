@@ -1,5 +1,7 @@
 package database
 
+import "log"
+
 type TimesCountRespose struct {
 	Place    int
 	Count    int
@@ -10,11 +12,13 @@ func (r *TimerDB) RetrieveTimesCount() ([]TimesCountRespose, error) {
 	query := `SELECT ROW_NUMBER () OVER (ORDER BY Count(t.id) DESC), Count(t.id), users.username FROM times t
  INNER JOIN  users on users.id = t.userid GROUP BY userid;`
 	rows, err := r.db.Query(query)
+	log.Print("Queried database")
 	if err != nil {
+		log.Printf("database query failed %s", err)
+
 		return nil, err
 	}
 	defer rows.Close()
-
 	var times []TimesCountRespose
 
 	for rows.Next() {

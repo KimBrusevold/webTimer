@@ -213,21 +213,6 @@ func (r *TimerDB) IsAuthorizedUser(authcode string, id int) bool {
 	return err != nil
 }
 
-func (r *TimerDB) Create(timer Timer) (*Timer, error) {
-	res, err := r.db.Exec("INSERT INTO times(starttime, endtime) values(?,?)", timer.StartTime, timer.EndTime)
-	if err != nil {
-		return nil, err
-	}
-
-	id, err := res.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	timer.ID = id
-
-	return &timer, nil
-}
-
 func (r *TimerDB) StartTimer(userId int) error {
 	startTime := time.Now().UnixMilli()
 
@@ -256,6 +241,7 @@ func (r *TimerDB) StartTimer(userId int) error {
 	}
 	return nil
 }
+
 func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 	query := `SELECT id, starttime FROM times WHERE userid = ? AND endtime IS NULL`
 	row := r.db.QueryRow(query, userId)
@@ -267,6 +253,7 @@ func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 		return -1, err
 	}
 
+	
 	endtime := time.Now().UnixMilli()
 	computed := endtime - startTime
 	_, err = r.db.Exec("UPDATE times SET endtime = ?, computedtime = ? WHERE id = ?", endtime, computed, id)
@@ -286,7 +273,8 @@ func (r *TimerDB) RetrieveTimes() ([]RetrieveTimesResponse, error) {
 		WHERE times.computedtime IS NOT NULL
 		GROUP BY userid;`
 	rows, err := r.db.Query(query)
-	if err != nil {
+	if err != nil {	
+		log.Printf("database query failed %s", err)
 		return nil, err
 	}
 	defer rows.Close()

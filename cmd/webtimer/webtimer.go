@@ -36,6 +36,11 @@ func main() {
 	connStr := buildConnectionString(settings)
 
 	db, err := sql.Open("libsql", connStr)
+	pingErr := db.Ping()
+	log.Printf("Opening and pinging %s", connStr)
+	if err != nil {
+		panic(pingErr)
+	}
 	if err != nil {
 		log.Fatalf("Could not create connector to database: %s", err)
 	}

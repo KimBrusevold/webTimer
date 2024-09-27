@@ -21,32 +21,43 @@
       <tbody>
         {{ range .timingData }}
         <tr>
-          <td class="align-center">{{ .Place }}</td>
-          <td class="align-center username">{{ .Username }}</td>
-          <td id="tid" class="align-center">{{ .Minutes }}:{{ .Seconds }}.{{ .Tenths }}</td>
+          <td class="text-left">{{ .Place }}</td>
+          <td class="text-left username">{{ .Username }}</td>
+          <td id="tid" class="text-right">{{ .Minutes }}:{{ .Seconds }}.{{ .Tenths }}</td>
         </tr>
         {{ end }}
       </tbody>
     </table>
   </div>
 
-  <table class="main-container">
-    <thead>
-      <tr>
-        <th>Nr.</th>
-        <th>Brukernavn</th>
-        <th>Antall</th>
-      </tr>
-    </thead>
-    <tbody id="times-rows">
-      {{ range .countData }}
-      <tr>
-        <td class="align-center">{{ .Place }}</td>
-        <td class="align-center username">{{ .Username }}</td>
-        <td class="align-center">{{ .Count }}</td>
-      </tr>
-      {{ end }}
-    </tbody>
-  </table>
+
+  <div class="button-row" style="margin-top: 20px">
+    <button aria-selected="true" class="selected">I dag</button>
+    <button aria-selected="false">Denne måneden</button>
+    <button aria-selected="false">Forrige måned</button>
+    <button aria-selected="false">I år</button>
+    <button aria-selected="false">All Time</button>
+  </div>
+  <div class="card">
+    <h2 class="card-title">Flest</h2>
+    <table class="leaderboard-table">
+      <thead>
+        <tr>
+          <th class="text-left">Nr.</th>
+          <th class="text-left">Brukernavn</th>
+          <th class="text-right">Antall</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .countData }}
+        <tr>
+          <td class="text-left">{{ .Place }}</td>
+          <td class="text-left">{{ .Username }}</td>
+          <td class="text-right">{{ .Count }}</td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
 </main>
 {{ template "footer" }}
