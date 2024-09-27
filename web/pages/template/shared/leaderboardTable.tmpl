@@ -1,0 +1,18 @@
+<table class="leaderboard-table">
+  <thead>
+    <tr>
+      <th class="text-left">Nr.</th>
+      <th class="text-left">Brukernavn</th>
+      <th class="text-right">Tid</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range .timingData }}
+    <tr>
+      <td class="text-left">{{ .Place }}</td>
+      <td class="text-left username">{{ .Username }}</td>
+      <td id="tid" class="text-right">{{ .Minutes }}:{{ .Seconds }}.{{ .Tenths }}</td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>

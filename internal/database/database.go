@@ -214,7 +214,7 @@ func (r *TimerDB) IsAuthorizedUser(authcode string, id int) bool {
 }
 
 func (r *TimerDB) StartTimer(userId int) error {
-	startTime := time.Now().UnixMilli()
+	startTime := time.Now().UTC().UnixMilli()
 
 	res := r.db.QueryRow(`SELECT count(id) FROM times WHERE userid = ? AND endtime IS NULL`, userId)
 	// if err != nil {
@@ -252,9 +252,8 @@ func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 	if err != nil {
 		return -1, err
 	}
-
 	
-	endtime := time.Now().UnixMilli()
+	endtime := time.Now().UTC().UnixMilli()
 	computed := endtime - startTime
 	_, err = r.db.Exec("UPDATE times SET endtime = ?, computedtime = ? WHERE id = ?", endtime, computed, id)
 
@@ -267,7 +266,7 @@ type RetrieveTimesResponse struct {
 	ComputedTime int64
 }
 
-func (r *TimerDB) RetrieveTimes() ([]RetrieveTimesResponse, error) {
+func (r *TimerDB) RetrieveAllTimeFastestTimes() ([]RetrieveTimesResponse, error) {
 	query := `SELECT ROW_NUMBER () OVER (ORDER BY times.computedtime ASC) rownum, min(times.computedtime), username FROM times 
 		INNER JOIN users on users.id = userid
 		WHERE times.computedtime IS NOT NULL
