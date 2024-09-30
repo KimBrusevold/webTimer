@@ -1,22 +1,24 @@
 {{ template "header" }}
 <main id="results-page">
   <h1>Resultater</h1>
-  <div class="button-row">
-    <button aria-selected="false" class="selected">I dag</button>
-    <button aria-selected="false">Denne måneden</button>
-    <button aria-selected="false">Forrige måned</button>
-    <button aria-selected="false">I år</button>
-    <button aria-selected="false">All Time</button>
+  <div class="button-row tabs" hx-target="#fastest-content" role="tablist" hx-on:htmx:after-on-load="let currentTab = document.querySelector('[aria-selected=true]');
+                               currentTab.setAttribute('aria-selected', 'false');
+                               currentTab.classList.remove('selected');
+                               let newTab = event.target;
+                               newTab.setAttribute('aria-selected', 'true');
+                               newTab.classList.add('selected');">
+    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=idag" aria-selected="true" class="selected">I dag</button>
+    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=denne-maned" aria-selected="false">Denne måneden</button>
+    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=forrige-maned" aria-selected="false">Forrige måned</button>
+    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=ar" aria-selected="false">I år</button>
+    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=noensinne" aria-selected="false">All Time</button>
   </div>
   <div class="card">
     <h2 class="card-title">Raskest</h2>
-    <div hx-get="/leaderboard/raskest?filter=idag" hx-trigger="load">
-       <div class="loader htmx-indicator"></div> 
-    </div>
-    
+    <div id="fastest-content" role="tabpanel" hx-get="/leaderboard/raskest?filter=idag" hx-trigger="load"><div class="loader htmx-indicator"></div></div>    
   </div>
 
-
+  <!--
   <div class="button-row" style="margin-top: 20px">
     <button aria-selected="true" class="selected">I dag</button>
     <button aria-selected="false">Denne måneden</button>
@@ -45,5 +47,6 @@
       </tbody>
     </table>
   </div>
+-->
 </main>
 {{ template "footer" }}

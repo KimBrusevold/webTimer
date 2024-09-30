@@ -57,6 +57,8 @@ func (lh LeaderboardHandler)RenderFastestLeaderboard(c *gin.Context) {
 
 	if(filter == "idag") {
 		times, err = lh.DB.RetrieveFastestTimeByTime(getRangeToday())
+	} else if filter == "noensinne" {
+		times, err = lh.DB.RetrieveAllTimeFastestTimes()
 	}
 	if err != nil {
 		log.Printf("Error getting fastest time %s", err)
