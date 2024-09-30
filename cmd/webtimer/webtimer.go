@@ -54,7 +54,7 @@ func main() {
 	lh := handler.LeaderboardHandler{
 		DB: timerDb,
 	}
-	
+
 	r.GET("/", lh.HandleLeaderboardShow)
 	r.GET("/leaderboard/raskest", lh.RenderFastestLeaderboard)
 

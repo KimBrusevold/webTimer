@@ -38,6 +38,7 @@ body {
   background-color: transparent;
   border: none;
   padding: 9px;
+  flex-grow: 1;
 }
 
 .button-row .selected {
