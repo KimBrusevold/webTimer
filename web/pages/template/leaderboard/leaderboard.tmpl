@@ -3,9 +3,11 @@
   <h1>Resultater</h1>
   <div class="button-row tabs" hx-target="#fastest-content" role="tablist" hx-on:htmx:after-on-load="let currentTab = document.querySelector('[aria-selected=true]');
                                currentTab.setAttribute('aria-selected', 'false');
+                               currentTab.removeAttribute('disabled');
                                currentTab.classList.remove('selected');
                                let newTab = event.target;
                                newTab.setAttribute('aria-selected', 'true');
+                               newTab.setAttribute('disabled', 'true');
                                newTab.classList.add('selected');">
     <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=idag" aria-selected="true" class="selected">I dag</button>
     <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=denne-maned" aria-selected="false">Denne måneden</button>
