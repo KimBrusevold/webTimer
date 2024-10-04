@@ -39,9 +39,42 @@ func (r *TimerDB) RetrieveTimesCount() ([]TimesCountRespose, error) {
 
 	return times, nil
 }
+func (r *TimerDB) RetrieveMostTimesByDate(from time.Time, to time.Time) ([]TimesCountRespose, error) {
+	query := `SELECT ROW_NUMBER () OVER (ORDER BY Count(t.id) DESC), Count(t.id), users.username FROM times t
+ 				INNER JOIN  users 
+				ON users.id = t.userid
+				WHERE t.computedtime IS NOT NULL
+				AND t.starttime >= ?
+				AND t.startTime < ?
+				GROUP BY userid;`
+	rows, err := r.db.Query(query, from.UnixMilli(), to.UnixMilli())
+	log.Print("Queried database")
+	if err != nil {
+		log.Printf("database query failed %s", err)
+
+		return nil, err
+	}
+	defer rows.Close()
+	var times []TimesCountRespose
+
+	for rows.Next() {
+		var tim TimesCountRespose
+		if err := rows.Scan(&tim.Place, &tim.Count, &tim.Username); err != nil {
+			return times, err
+		}
+
+		times = append(times, tim)
+	}
+
+	if err = rows.Err(); err != nil {
+		return times, err
+	}
+
+	return times, nil
+}
 
 // Get fastest times by times. Time provided should be an UTC date.
-func (r *TimerDB) RetrieveFastestTimeByTime(from time.Time,to time.Time) ([]RetrieveTimesResponse, error) {
+func (r *TimerDB) RetrieveFastestTimeByTime(from time.Time, to time.Time) ([]RetrieveTimesResponse, error) {
 
 	query := `SELECT ROW_NUMBER () OVER (ORDER BY times.computedtime ASC) rownum, min(times.computedtime), username FROM times 
 		INNER JOIN users on users.id = userid
@@ -50,7 +83,7 @@ func (r *TimerDB) RetrieveFastestTimeByTime(from time.Time,to time.Time) ([]Retr
 		AND times.startTime < ?
 		GROUP BY userid;`
 	rows, err := r.db.Query(query, from.UnixMilli(), to.UnixMilli())
-	if err != nil {	
+	if err != nil {
 		log.Printf("database query failed %s", err)
 		return nil, err
 	}

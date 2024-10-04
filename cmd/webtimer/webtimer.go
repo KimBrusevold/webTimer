@@ -57,6 +57,7 @@ func main() {
 
 	r.GET("/", lh.HandleLeaderboardShow)
 	r.GET("/leaderboard/raskest", lh.RenderFastestLeaderboard)
+	r.GET("/leaderboard/flest", lh.RenderMostLeaderboard)
 
 	r.Static("/res/images", "./web/static/images")
 	r.Static("/res/css", "./web/static/css")

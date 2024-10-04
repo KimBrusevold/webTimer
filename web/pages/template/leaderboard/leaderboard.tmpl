@@ -1,7 +1,7 @@
 {{ template "header" }}
 <main id="results-page">
   <h1>Resultater</h1>
-  <div class="button-row tabs" hx-target="#fastest-content" role="tablist" hx-on:htmx:after-on-load="let currentTab = document.querySelector('[aria-selected=true]');
+  <div class="button-row button-row-fastest tabs" hx-target="#fastest-content" role="tablist" hx-on:htmx:after-on-load="let currentTab = document.querySelector('.button-row-fastest [aria-selected=true]');
                                currentTab.setAttribute('aria-selected', 'false');
                                currentTab.removeAttribute('disabled');
                                currentTab.classList.remove('selected');
@@ -9,44 +9,42 @@
                                newTab.setAttribute('aria-selected', 'true');
                                newTab.setAttribute('disabled', 'true');
                                newTab.classList.add('selected');">
-    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=idag" aria-selected="true" class="selected">I dag</button>
-    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=denne-maned" aria-selected="false">Denne måneden</button>
-    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=noensinne" aria-selected="false">All time</button>
+    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=idag" aria-selected="true"
+      class="selected">I dag</button>
+    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=denne-maned"
+      aria-selected="false">Denne måneden</button>
+    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/raskest?filter=noensinne"
+      aria-selected="false">All time</button>
   </div>
   <div class="card">
     <h2 class="card-title">Raskest</h2>
-    <div id="fastest-content" role="tabpanel" hx-get="/leaderboard/raskest?filter=idag" hx-trigger="load"><div class="loader htmx-indicator"></div></div>    
+    <div id="fastest-content" role="tabpanel" hx-get="/leaderboard/raskest?filter=idag" hx-trigger="load">
+      <div class="loader htmx-indicator"></div>
+    </div>
   </div>
 
-  <!--
-  <div class="button-row" style="margin-top: 20px">
-    <button aria-selected="true" class="selected">I dag</button>
-    <button aria-selected="false">Denne måneden</button>
-    <button aria-selected="false">Forrige måned</button>
-    <button aria-selected="false">I år</button>
-    <button aria-selected="false">All Time</button>
+
+  <div class="button-row tabs button-row-most" hx-target="#most-content" role="tablist" hx-on:htmx:after-on-load="let currentTab = document.querySelector('.button-row-most [aria-selected=true]');
+                               currentTab.setAttribute('aria-selected', 'false');
+                               currentTab.removeAttribute('disabled');
+                               currentTab.classList.remove('selected');
+                               let newTab = event.target;
+                               newTab.setAttribute('aria-selected', 'true');
+                               newTab.setAttribute('disabled', 'true');
+                               newTab.classList.add('selected');">
+    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/flest?filter=idag" aria-selected="true"
+      class="selected">I dag</button>
+    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/flest?filter=denne-maned"
+      aria-selected="false">Denne måneden</button>
+    <button role="tab" aria-controls="tab-contents" hx-get="/leaderboard/flest?filter=noensinne"
+      aria-selected="false">All time</button>
   </div>
   <div class="card">
     <h2 class="card-title">Flest</h2>
-    <table class="leaderboard-table">
-      <thead>
-        <tr>
-          <th class="text-left">Nr.</th>
-          <th class="text-left">Brukernavn</th>
-          <th class="text-right">Antall</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{ range .countData }}
-        <tr>
-          <td class="text-left">{{ .Place }}</td>
-          <td class="text-left">{{ .Username }}</td>
-          <td class="text-right">{{ .Count }}</td>
-        </tr>
-        {{ end }}
-      </tbody>
-    </table>
+    <div id="most-content" role="tabpanel" hx-get="/leaderboard/flest?filter=idag" hx-trigger="load">
+      <div class="loader htmx-indicator"></div>
+    </div>
   </div>
--->
+
 </main>
 {{ template "footer" }}

@@ -49,20 +49,47 @@ func (lh LeaderboardHandler) HandleLeaderboardShow(c *gin.Context) {
 	})
 }
 
-func (lh LeaderboardHandler)RenderFastestLeaderboard(c *gin.Context) {
+func (lh LeaderboardHandler) RenderMostLeaderboard(c *gin.Context) {
 	filter := c.DefaultQuery("filter", "idag")
-	log.Printf("QUERY AT %s", filter)
-	var times []database.RetrieveTimesResponse
+	var times []database.TimesCountRespose
 	var err error
 
-	if(filter == "idag") {
-		times, err = lh.DB.RetrieveFastestTimeByTime(getRangeToday())
+	if filter == "idag" {
+		times, err = lh.DB.RetrieveMostTimesByDate(getRangeToday())
 	} else if filter == "noensinne" {
-		times, err = lh.DB.RetrieveAllTimeFastestTimes()
+		times, err = lh.DB.RetrieveTimesCount()
+	} else if filter == "denne-maned" {
+		times, err = lh.DB.RetrieveMostTimesByDate(getRangeCurrentMonth())
 	}
+
 	if err != nil {
 		log.Printf("Error getting fastest time %s", err)
 	}
+
+	c.HTML(http.StatusOK, "leaderboardTableMost.tmpl", gin.H{
+		"leaderboardOfHeader": "Tid",
+		"timingData":          times,
+	})
+}
+
+func (lh LeaderboardHandler) RenderFastestLeaderboard(c *gin.Context) {
+	filter := c.DefaultQuery("filter", "idag")
+
+	var times []database.RetrieveTimesResponse
+	var err error
+
+	if filter == "idag" {
+		times, err = lh.DB.RetrieveFastestTimeByTime(getRangeToday())
+	} else if filter == "noensinne" {
+		times, err = lh.DB.RetrieveAllTimeFastestTimes()
+	} else if filter == "denne-maned" {
+		times, err = lh.DB.RetrieveFastestTimeByTime(getRangeCurrentMonth())
+	}
+
+	if err != nil {
+		log.Printf("Error getting fastest time %s", err)
+	}
+
 	log.Printf("FANT: %d tider", len(times))
 
 	var timesDisplay []model.TimesDisplay
@@ -78,17 +105,17 @@ func (lh LeaderboardHandler)RenderFastestLeaderboard(c *gin.Context) {
 		timesDisplay = append(timesDisplay, td)
 	}
 
-	c.HTML(http.StatusOK, "leaderboardTable.tmpl", gin.H {
+	c.HTML(http.StatusOK, "leaderboardTable.tmpl", gin.H{
 		"leaderboardOfHeader": "Tid",
-		"timingData": timesDisplay,
+		"timingData":          timesDisplay,
 	})
 }
 
 func getRangeToday() (time.Time, time.Time) {
 	now := time.Now().UTC()
 	currYear, currMont, currDay := now.Date()
-	startOfDay := time.Date(currYear, currMont, currDay,0,0,0,0, now.Location())
-	startOfTomorow := startOfDay.AddDate(0,0,1)
+	startOfDay := time.Date(currYear, currMont, currDay, 0, 0, 0, 0, now.Location())
+	startOfTomorow := startOfDay.AddDate(0, 0, 1)
 
 	log.Printf("fra: %d \n til: %d", startOfDay.UnixMilli(), startOfTomorow.UnixMilli())
 	return startOfDay, startOfTomorow
@@ -97,8 +124,8 @@ func getRangeToday() (time.Time, time.Time) {
 func getRangeCurrentMonth() (time.Time, time.Time) {
 	now := time.Now().UTC()
 	currYear, currMont, _ := now.Date()
-	firstOfMonth := time.Date(currYear, currMont, 1,0,0,0,0, now.Location())
-	nextMonth := firstOfMonth.AddDate(0,1,0)
+	firstOfMonth := time.Date(currYear, currMont, 1, 0, 0, 0, 0, now.Location())
+	nextMonth := firstOfMonth.AddDate(0, 1, 0)
 
-	return  firstOfMonth, nextMonth
+	return firstOfMonth, nextMonth
 }
