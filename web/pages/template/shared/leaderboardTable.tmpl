@@ -3,7 +3,7 @@
     <tr>
       <th class="text-left">Nr.</th>
       <th class="text-left">Brukernavn</th>
-      <th class="text-right">Tid</th>
+      <th class="text-right">Tid (min:sek.tusen)</th>
     </tr>
   </thead>
   <tbody>
@@ -11,7 +11,8 @@
     <tr>
       <td class="text-left">{{ .Place }}</td>
       <td class="text-left username">{{ .Username }}</td>
-      <td id="tid" class="text-right">{{ .Minutes }}:{{ .Seconds }}.{{ .Tenths }}</td>
+      <td id="tid" class="text-right">{{ .Minutes }}:{{ if lt .Seconds 10}}0{{end}}{{ .Seconds }}.{{if lt .Tenths
+        10}}00{{else}}{{if lt .Tenths 100}}0{{end}}{{end}}{{ .Tenths }}</td>
     </tr>
     {{ end }}
   </tbody>

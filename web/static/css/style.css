@@ -9,6 +9,20 @@ body {
 
 #results-page {
   padding: 5px 10px 0 10px;
+  display: grid;
+  gap: 1em;
+  grid-template-columns: 1fr;
+}
+
+@media only screen and (min-width: 801px) {
+  #results-page {
+    grid-template-columns: 1fr 1fr;
+    gap: 1em;
+  }
+
+  section {
+    grid-row: 2;
+  }
 }
 
 .card {
@@ -188,19 +202,34 @@ tr>td:last-child {
   width: 45px;
   aspect-ratio: 1;
   --c: no-repeat linear-gradient(#000 0 0);
-  background: 
-    var(--c) 0%   50%,
-    var(--c) 50%  50%,
+  background:
+    var(--c) 0% 50%,
+    var(--c) 50% 50%,
     var(--c) 100% 50%;
   background-size: 20% 100%;
   animation: l1 1s infinite linear;
 }
+
 @keyframes l1 {
-  0%  {background-size: 20% 100%,20% 100%,20% 100%}
-  33% {background-size: 20% 10% ,20% 100%,20% 100%}
-  50% {background-size: 20% 100%,20% 10% ,20% 100%}
-  66% {background-size: 20% 100%,20% 100%,20% 10% }
-  100%{background-size: 20% 100%,20% 100%,20% 100%}
+  0% {
+    background-size: 20% 100%, 20% 100%, 20% 100%
+  }
+
+  33% {
+    background-size: 20% 10%, 20% 100%, 20% 100%
+  }
+
+  50% {
+    background-size: 20% 100%, 20% 10%, 20% 100%
+  }
+
+  66% {
+    background-size: 20% 100%, 20% 100%, 20% 10%
+  }
+
+  100% {
+    background-size: 20% 100%, 20% 100%, 20% 100%
+  }
 }
 
 .htmx-settling .loader {
