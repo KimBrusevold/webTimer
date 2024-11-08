@@ -62,7 +62,7 @@ func main() {
 	r.Static("/res/images", "./web/static/images")
 	r.Static("/res/css", "./web/static/css")
 	r.Static("/res/scripts", "./web/static/scripts")
-
+	r.Static("/res/fonts", "./web/static/fonts")
 	r.StaticFile("/favicon.ico", "./web/static/images/upstairs.png")
 
 	authHandler := auth.AuthHandler{

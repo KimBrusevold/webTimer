@@ -1,7 +1,12 @@
-@import url('https://fonts.googleapis.com/css?family=Poppins:700|Open%20Sans:400');
+@import url('https://fonts.googleapis.com/css?family=Poppins:700');
+
+@font-face {
+    font-family: "contentfont";
+    src: url("/res/fonts/OpenSans-Regular.ttf");
+}
 
 body {
-    font-family: 'Open Sans';
+    font-family: "contentfont";
     font-weight: 400;
 }
 

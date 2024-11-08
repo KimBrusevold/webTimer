@@ -213,7 +213,7 @@ func (r *TimerDB) IsAuthorizedUser(authcode string, id int) bool {
 	return err != nil
 }
 
-func (r *TimerDB) StartTimer(userId int) error {
+func (r *TimerDB) StartTimer(userId int) (string, error) {
 	startTime := time.Now().UTC().UnixMilli()
 
 	res := r.db.QueryRow(`SELECT count(id) FROM times WHERE userid = ? AND endtime IS NULL`, userId)
@@ -226,20 +226,20 @@ func (r *TimerDB) StartTimer(userId int) error {
 	err := res.Scan(&n)
 	if err != nil {
 		log.Printf("kunne ikke lese antall rader påvirket")
-		return err
+		return "", err
 	}
 	if n > 0 {
 		log.Printf("Antall tider startet: %d", n)
 		log.Print("Tid er allerede påbegynt")
-		return nil
+		return "", nil
 	}
-
-	command := `INSERT INTO times(starttime, userid) values(?,?)`
-	_, err = r.db.Exec(command, startTime, userId)
+	randomString := uuid.NewString()
+	command := `INSERT INTO times(starttime, userid, randomString) values(?,?,?)`
+	_, err = r.db.Exec(command, startTime, userId, randomString)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return randomString, nil
 }
 
 func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
@@ -252,7 +252,7 @@ func (r *TimerDB) EndTimeTimer(userId int) (int64, error) {
 	if err != nil {
 		return -1, err
 	}
-	
+
 	endtime := time.Now().UTC().UnixMilli()
 	computed := endtime - startTime
 	_, err = r.db.Exec("UPDATE times SET endtime = ?, computedtime = ? WHERE id = ?", endtime, computed, id)
@@ -272,7 +272,7 @@ func (r *TimerDB) RetrieveAllTimeFastestTimes() ([]RetrieveTimesResponse, error)
 		WHERE times.computedtime IS NOT NULL
 		GROUP BY userid;`
 	rows, err := r.db.Query(query)
-	if err != nil {	
+	if err != nil {
 		log.Printf("database query failed %s", err)
 		return nil, err
 	}

@@ -1,0 +1,99 @@
+{{ template "header" }}
+
+<h1>Klar?</h2>
+    <p>Trykk på knappen under for å starte skanning av qr kode. </p>
+    <input type="hidden" id="uid" name="uid" value="{{ .uid }}">
+    <button onclick="startScanning()">Start</button>
+    <button onclick="byttKamera()">Bytt kamera</button>
+
+    <div id="qr-reader"></div>
+    <div id="qr-reader-results"></div>
+    <style>
+        #qr-reader video {
+            width: 100%;
+        }
+    </style>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        let selectedCamera = 0;
+        let otc = "";
+        function startScanning() {
+            Html5Qrcode.getCameras().then(devices => {
+                /**
+                 * devices would be an array of objects of type:
+                 * { id: "id", label: "label" }
+                 */
+                if (devices && devices.length >= 1) {
+                    var cameraId = devices[0].id;
+                    openCamera(cameraId);
+                }
+            }).catch(err => {
+                console.error(err);
+                alert("Noe gikk galt under henting av tilgjenglige kameraer. Har du ikke gitt tilgang til nettsiden?");
+            });
+        }
+
+        async function openCamera(cameraId) {
+            const html5QrCode = new Html5Qrcode("qr-reader");
+            html5QrCode.start(
+                cameraId,
+                {
+                    fps: 10,    // Optional, frame per seconds for qr code scanning
+                    qrbox: { width: 250, height: 250, formatsToSupport: [0] }  // Optional, if you want bounded box UI
+                },
+                async (decodedText, decodedResult) => {
+                    await startTimer(decodedText)
+                },
+                (errorMessage) => {
+                    // parse error, ignore it.
+                })
+                .catch((err) => {
+                    // Start failed, handle it.
+                });
+        }
+
+        function byttKamera() {
+            Html5Qrcode.getCameras().then(devices => {
+                /**
+                 * devices would be an array of objects of type:
+                 * { id: "id", label: "label" }
+                 */
+                let newCamera = (selectedCamera + 1) % devices.length;
+
+                if (devices && devices.length >= 1) {
+                    var cameraId = devices[newCamera].id;
+                    openCamera(cameraId);
+                }
+            }).catch(err => {
+                console.error(err);
+                alert("Noe gikk galt under henting av tilgjenglige kameraer. Har du ikke gitt tilgang til nettsiden?");
+            });
+        }
+
+        async function startTimer(decodedText) {
+            const uid = document.getElementById("uid").value;
+            console.log(uid);
+            try {
+                const response = await fetch("/timer/start-lop", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ uid: uid, qrCode: decodedText }),
+                });
+
+                if (!response.ok) {
+                    alert("Feilet med å starte timer");
+                }
+
+                const json = await response.json();
+                otc = json.otc;
+            } catch (error) {
+                alert("Feilet med å starte timer");
+                console.error(error);
+            }
+
+        }
+
+    </script>
+    {{ template "footer" }}
