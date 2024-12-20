@@ -5,26 +5,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/x-icon" href="/res/images/upstairs.png">
-  <link rel="stylesheet" href="/res/css/style.css">
+  <link rel="stylesheet" href="/res/css/pico.red_v2.0.6.min.css">
   <script src="/res/scripts/htmx_1-9-6.min.js"></script>
   <title>Værste Trappeløp - Registrer Bruker</title>
 </head>
+
 <body>
-<main class="login-container">
+  <main>
     <h2>Trappeløp</h2>
-    <div class="login-box" id="login-form-container">
-      <form class="login-form" 
-        hx-post="/aut/registrer-bruker"
-        hx-target="this"
-        hx-swap="outerHTML">
-          <label for="username">Brukernavn</label>
-          <input type="text" name="username" id="username" required />
-          <label for="email">Din Epost</label>
-          <input type="email" name="email" id="email" placeholder="Må være en '@soprasteria.com' adresse" />      
-          <label for="passord">Ditt passord</label>
-          <input type="password" name="password" id="password" required />
-          <input type="submit" value="Registrer"/>
+    <div id="login-form-container">
+      <form hx-post="/aut/registrer-bruker" hx-target="this" hx-swap="outerHTML">
+        <label for="username">Brukernavn</label>
+        <input type="text" name="username" id="username" required />
+        <label for="email">Din Epost</label>
+        <input type="email" name="email" id="email" placeholder="Må være en '@soprasteria.com' adresse" />
+        <label for="passord">Ditt passord</label>
+        <input type="password" name="password" id="password" required />
+        <input type="submit" value="Registrer" />
       </form>
     </div>
-</main>
+  </main>
   {{ template "footer" }}

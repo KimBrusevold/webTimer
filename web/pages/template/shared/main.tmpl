@@ -8,9 +8,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/x-icon" href="/res/images/upstairs.png">
   <script src="/res/scripts/htmx_1-9-6.min.js"></script>
-  <link rel="stylesheet" href="/res/css/style.css">
-  <link rel="stylesheet" href="/res/css/fonts.css">
+  <link rel="stylesheet" href="/res/css/pico.red_v2.0.6.min.css">
   <title>Værste Trappeløp - {{ . }}</title>
+  <style>
+    #trappelop-logo {
+      height: auto;
+      width: 2.25rem;
+    }
+
+    .grid-auto-columns {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 10px;
+    }
+  </style>
 </head>
+
 <body>
-{{ end }}
+  <header class="container">
+    <a href="/">
+      <img id="trappelop-logo" src="/res/images/upstairs.png">
+    </a>
+  </header>
+  {{ end }}
